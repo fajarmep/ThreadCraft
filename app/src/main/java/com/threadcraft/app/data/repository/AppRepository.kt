@@ -123,23 +123,74 @@ Jumlah bagian: $partCount
 
         val url = resolveChatCompletionUrl(prefs.aiBaseUrl)
         val apiKey = cleanApiKey(prefs.aiApiKey)
+        val model = prefs.aiModel.trim().ifBlank { "gpt-4o-mini" }
 
-        val response = aiService.generateCompletion(
-            url = url,
-            authHeader = "Bearer $apiKey",
-            request = AiRequest(
-                model = prefs.aiModel.trim().ifBlank { "gpt-4o-mini" },
-                messages = listOf(
-                    AiMessage("system", systemPrompt),
-                    AiMessage("user", userPrompt)
-                )
-            )
-        )
+        val jsonPayload = JSONObject().apply {
+            put("model", model)
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", systemPrompt)
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userPrompt)
+                })
+            })
+            put("temperature", 0.7)
+            put("max_tokens", 2500)
+        }.toString()
 
-        val content = response.choices?.firstOrNull()?.message?.content ?: ""
-        val parts = content.split("===PART===")
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val requestBody = jsonPayload.toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $apiKey")
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody)
+            .build()
+
+        val response = RetrofitClient.okHttpClient.newCall(request).execute()
+        val rawBody = response.body?.string() ?: ""
+
+        if (!response.isSuccessful) {
+            val errorMsg = try {
+                val errJson = JSONObject(rawBody)
+                errJson.optJSONObject("error")?.optString("message") ?: rawBody.take(150)
+            } catch (_: Exception) {
+                rawBody.take(150)
+            }
+            throw IOException("HTTP ${response.code}: $errorMsg")
+        }
+
+        val cleanBody = rawBody.trim().removePrefix("\uFEFF")
+        if (!cleanBody.startsWith("{")) {
+            throw IOException("Server merespons bukan JSON: ${cleanBody.take(100)}")
+        }
+
+        val json = JSONObject(cleanBody)
+        val choices = json.optJSONArray("choices")
+        val firstChoice = choices?.optJSONObject(0)
+        val message = firstChoice?.optJSONObject("message")
+        val content = message?.optString("content")?.trim() ?: ""
+
+        if (content.isBlank()) {
+            val err = json.optJSONObject("error")?.optString("message")
+            throw IOException(if (!err.isNullOrBlank()) err else "Model tidak menghasilkan teks")
+        }
+
+        val rawParts = content.split("===PART===")
             .map { it.trim() }
             .filter { it.isNotBlank() }
+
+        val parts = if (rawParts.size > 1) {
+            rawParts
+        } else {
+            content.split("\n\n")
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+        }
 
         parts.mapIndexed { index, part ->
             "${index + 1}/${parts.size} $part"

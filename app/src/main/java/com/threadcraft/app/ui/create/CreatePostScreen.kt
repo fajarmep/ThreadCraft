@@ -270,6 +270,23 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                 }
             }
 
+            state.error?.let { err ->
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceVariant, RectangleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.error, RectangleShape)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = err,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
             // Preview section
             if (state.generatedParts.isNotEmpty()) {
                 Spacer(Modifier.height(24.dp))

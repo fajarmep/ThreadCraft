@@ -1,5 +1,6 @@
 package com.threadcraft.app.data.remote
 
+import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -7,6 +8,10 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
+
+    private val lenientGson by lazy {
+        GsonBuilder().setLenient().create()
+    }
 
     val okHttpClient by lazy {
         OkHttpClient.Builder()
@@ -23,7 +28,7 @@ object RetrofitClient {
         Retrofit.Builder()
             .baseUrl("https://api.openai.com/v1/")
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(lenientGson))
             .build()
             .create(AiApiService::class.java)
     }
@@ -32,7 +37,7 @@ object RetrofitClient {
         Retrofit.Builder()
             .baseUrl("https://graph.threads.net/")
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(lenientGson))
             .build()
             .create(ThreadsApiService::class.java)
     }
