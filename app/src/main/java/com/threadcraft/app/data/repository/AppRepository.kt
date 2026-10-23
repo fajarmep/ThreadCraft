@@ -11,7 +11,7 @@ import com.threadcraft.app.data.remote.RetrofitClient
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
-class AppRepository(context: Context? = null, private val prefs: SecurePrefs) {
+class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
 
     private val appContext = context?.applicationContext ?: ThreadCraftApp.instance
     private val database by lazy { AppDatabase.getDatabase(appContext) }
