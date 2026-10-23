@@ -263,55 +263,57 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                 }
             }
 
-            state.error?.let { err ->
-                Spacer(Modifier.height(10.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(SurfaceVariant, RectangleShape)
-                        .border(1.dp, MaterialTheme.colorScheme.error, RectangleShape)
-                        .padding(12.dp)
-                ) {
-                    Column {
-                        Text(
-                            text = "Gagal Generate / Detail Log:",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = err,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.End,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                    val clip = android.content.ClipData.newPlainText("Error Log", err)
-                                    clipboard.setPrimaryClip(clip)
-                                    android.widget.Toast.makeText(context, "Log disalin!", android.widget.Toast.LENGTH_SHORT).show()
-                                },
-                                shape = RectangleShape,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
-                                modifier = Modifier.height(32.dp)
+            if (state.generatedParts.isEmpty()) {
+                state.error?.let { err ->
+                    Spacer(Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SurfaceVariant, RectangleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.error, RectangleShape)
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "Detail Log Galat:",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = err,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.End,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Salin Log", style = MaterialTheme.typography.labelSmall)
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            OutlinedButton(
-                                onClick = {
-                                    viewModel.clearError()
-                                },
-                                shape = RectangleShape,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
-                                modifier = Modifier.height(32.dp)
-                            ) {
-                                Text("Hapus", style = MaterialTheme.typography.labelSmall)
+                                OutlinedButton(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                        val clip = android.content.ClipData.newPlainText("Error Log", err)
+                                        clipboard.setPrimaryClip(clip)
+                                        android.widget.Toast.makeText(context, "Log disalin!", android.widget.Toast.LENGTH_SHORT).show()
+                                    },
+                                    shape = RectangleShape,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text("Salin Log", style = MaterialTheme.typography.labelSmall)
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.clearError()
+                                    },
+                                    shape = RectangleShape,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text("Hapus", style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                         }
                     }
@@ -439,6 +441,61 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                         Icon(Icons.Default.Schedule, contentDescription = null, tint = Accent, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Jadwalkan", color = Accent)
+                    }
+                }
+
+                state.error?.let { err ->
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SurfaceVariant, RectangleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.error, RectangleShape)
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "Detail Log Galat Posting:",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = err,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.End,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                        val clip = android.content.ClipData.newPlainText("Error Log", err)
+                                        clipboard.setPrimaryClip(clip)
+                                        android.widget.Toast.makeText(context, "Log disalin!", android.widget.Toast.LENGTH_SHORT).show()
+                                    },
+                                    shape = RectangleShape,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text("Salin Log", style = MaterialTheme.typography.labelSmall)
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.clearError()
+                                    },
+                                    shape = RectangleShape,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text("Hapus", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
                     }
                 }
             }

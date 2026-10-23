@@ -259,27 +259,57 @@ Jumlah bagian: $partCount
     }
 
     suspend fun postToThreads(parts: List<String>): List<String> = withContext(Dispatchers.IO) {
-        val userId = prefs.threadsUserId
-        val token = prefs.threadsAccessToken
+        val userId = prefs.threadsUserId.ifBlank { "me" }
+        val token = prefs.threadsAccessToken.trim()
+        if (token.isBlank()) {
+            throw IOException("Token Threads kosong. Silakan login Threads di tab Pengaturan.")
+        }
         val postedIds = mutableListOf<String>()
 
-        for ((index, text) in parts.withIndex()) {
+        for ((index, rawText) in parts.withIndex()) {
+            val text = if (rawText.length > 500) rawText.take(497) + "..." else rawText
             val replyToId = postedIds.lastOrNull()
 
-            val createResponse = threadsService.createThread(
-                userId = userId,
-                text = text,
-                accessToken = token,
-                replyToId = replyToId
-            )
+            val createResponse = try {
+                threadsService.createThread(
+                    userId = userId,
+                    text = text,
+                    accessToken = token,
+                    replyToId = replyToId
+                )
+            } catch (e: retrofit2.HttpException) {
+                val errBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null } ?: ""
+                val msg = try {
+                    val obj = JSONObject(errBody).optJSONObject("error")
+                    val m = obj?.optString("message") ?: errBody
+                    val code = obj?.optInt("code")
+                    "$m (code $code)"
+                } catch (_: Exception) {
+                    errBody.take(300)
+                }
+                throw IOException("Gagal buat container (Bagian ${index + 1}/${parts.size}): HTTP ${e.code()} - $msg")
+            }
 
-            delay(2000)
+            delay(2500)
 
-            val publishResponse = threadsService.publishThread(
-                userId = userId,
-                creationId = createResponse.id,
-                accessToken = token
-            )
+            val publishResponse = try {
+                threadsService.publishThread(
+                    userId = userId,
+                    creationId = createResponse.id,
+                    accessToken = token
+                )
+            } catch (e: retrofit2.HttpException) {
+                val errBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null } ?: ""
+                val msg = try {
+                    val obj = JSONObject(errBody).optJSONObject("error")
+                    val m = obj?.optString("message") ?: errBody
+                    val code = obj?.optInt("code")
+                    "$m (code $code)"
+                } catch (_: Exception) {
+                    errBody.take(300)
+                }
+                throw IOException("Gagal publish (Bagian ${index + 1}/${parts.size}): HTTP ${e.code()} - $msg")
+            }
 
             postedIds.add(publishResponse.id)
 
@@ -352,12 +382,28 @@ Jumlah bagian: $partCount
             redirectUri = redirectUri,
             code = code.trim()
         )
-        prefs.threadsAccessToken = response.access_token
+        var finalToken = response.access_token
+        try {
+            val longResponse = threadsService.exchangeLongLivedToken(
+                clientSecret = prefs.threadsAppSecret.trim(),
+                accessToken = response.access_token
+            )
+            if (longResponse.access_token.isNotBlank()) {
+                finalToken = longResponse.access_token
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("AppRepository", "Failed long-lived token exchange, fallback to short-lived", e)
+        }
+
+        prefs.threadsAccessToken = finalToken
         prefs.threadsUserId = response.user_id.toString()
 
-        val profile = threadsService.getProfile(accessToken = response.access_token)
+        val profile = threadsService.getProfile(accessToken = finalToken)
         prefs.threadsUsername = profile.username
+        if (profile.id.isNotBlank()) {
+            prefs.threadsUserId = profile.id
+        }
 
-        Pair(profile.username, response.user_id.toString())
+        Pair(profile.username, prefs.threadsUserId)
     }
 }

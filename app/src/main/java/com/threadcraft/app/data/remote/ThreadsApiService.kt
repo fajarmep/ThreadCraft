@@ -1,6 +1,7 @@
 package com.threadcraft.app.data.remote
 
 import com.threadcraft.app.data.model.ThreadsCreateResponse
+import com.threadcraft.app.data.model.ThreadsLongLivedTokenResponse
 import com.threadcraft.app.data.model.ThreadsPublishResponse
 import com.threadcraft.app.data.model.ThreadsTokenResponse
 import com.threadcraft.app.data.model.ThreadsUserResponse
@@ -22,6 +23,13 @@ interface ThreadsApiService {
         @Field("redirect_uri") redirectUri: String,
         @Field("code") code: String
     ): ThreadsTokenResponse
+
+    @GET("access_token")
+    suspend fun exchangeLongLivedToken(
+        @Query("grant_type") grantType: String = "th_exchange_token",
+        @Query("client_secret") clientSecret: String,
+        @Query("access_token") accessToken: String
+    ): ThreadsLongLivedTokenResponse
 
     @GET("v1.0/me")
     suspend fun getProfile(

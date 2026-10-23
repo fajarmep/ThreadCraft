@@ -32,6 +32,12 @@ data class ThreadsTokenResponse(
     val user_id: Long
 )
 
+data class ThreadsLongLivedTokenResponse(
+    val access_token: String,
+    val token_type: String? = null,
+    val expires_in: Long? = null
+)
+
 data class ThreadsUserResponse(
     val id: String,
     val username: String,

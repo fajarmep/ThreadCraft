@@ -139,7 +139,25 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     )
                 )
                 _state.value = _state.value.copy(isPosting = false, postSuccess = true)
-            } catch (e: Exception) {
+            } catch (t: Throwable) {
+                android.util.Log.e("CreatePostViewModel", "Post to threads error", t)
+                val detailLog = buildString {
+                    val msg = t.localizedMessage ?: t.message ?: "Terjadi kesalahan"
+                    appendLine("Pesan: $msg")
+                    appendLine("Tipe: ${t.javaClass.simpleName}")
+                    if (msg.contains("190", ignoreCase = true) || msg.contains("token", ignoreCase = true) || msg.contains("session", ignoreCase = true)) {
+                        appendLine("\nSaran: Sesi atau Token login Threads kemungkinan kadaluarsa/tidak valid. Silakan Logout lalu Login Ulang di menu Pengaturan.")
+                    }
+                    val cause = t.cause
+                    if (cause != null) {
+                        appendLine("Penyebab: ${cause.localizedMessage ?: cause.message}")
+                    }
+                    val stack = android.util.Log.getStackTraceString(t)
+                    if (stack.isNotBlank()) {
+                        appendLine("\n--- Detail Log ---")
+                        appendLine(stack.take(1200))
+                    }
+                }
                 repo.savePost(
                     PostHistory(
                         productTitle = s.productTitle,
@@ -147,12 +165,12 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                         storyStyle = s.storyStyle,
                         parts = s.generatedParts,
                         status = "FAILED",
-                        errorMessage = e.message
+                        errorMessage = t.message
                     )
                 )
                 _state.value = _state.value.copy(
                     isPosting = false,
-                    error = "Gagal posting: ${e.message}"
+                    error = detailLog
                 )
             }
         }
