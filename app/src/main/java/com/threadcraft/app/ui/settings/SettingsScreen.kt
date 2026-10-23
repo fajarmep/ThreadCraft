@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -377,18 +376,19 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 }
             } else {
                 if (state.isExchangingToken) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth().padding(16.dp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SurfaceVariant, RectangleShape)
+                            .border(1.dp, Accent, RectangleShape)
+                            .padding(16.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                        Text(
+                            "Menghubungkan ke Threads...",
                             color = Accent,
-                            strokeWidth = 2.dp
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                        Spacer(Modifier.width(12.dp))
-                        Text("Menghubungkan...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     OutlinedButton(

@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -263,13 +262,7 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                 enabled = !state.isGenerating
             ) {
                 if (state.isGenerating) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Generating...")
+                    Text("Sedang Generate...", style = MaterialTheme.typography.labelLarge)
                 } else {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -359,11 +352,7 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                         enabled = !state.isPosting
                     ) {
                         if (state.isPosting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
+                            Text("Memposting...", style = MaterialTheme.typography.labelMedium)
                         } else {
                             Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
