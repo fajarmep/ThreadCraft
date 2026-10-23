@@ -58,12 +58,12 @@ fun SplashScreen(onFinished: () -> Unit) {
         ) {
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "ThreadCraft Logo",
+                contentDescription = "ThreadsCraft Logo",
                 modifier = Modifier.size(96.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "ThreadCraft",
+                text = "ThreadsCraft",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Accent

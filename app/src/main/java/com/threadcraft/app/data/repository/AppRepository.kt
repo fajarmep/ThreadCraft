@@ -178,7 +178,7 @@ ATURAN KETAT:
 4. Bagian pertama harus hook yang bikin orang berhenti scroll
 5. Bagian terakhir harus CTA dengan link affiliate
 6. Gunakan bahasa Indonesia yang natural dan engaging
-7. JANGAN gunakan hashtag berlebihan, maksimal 2-3 di bagian terakhir
+7. JANGAN gunakan hashtag (#) sama sekali. Dilarang menulis hashtag di seluruh bagian thread
 8. Sisipkan link affiliate ($affiliateLink) HANYA di bagian terakhir
 9. Setiap bagian harus bisa berdiri sendiri tapi tetap nyambung
 10. Gunakan emoji secukupnya untuk emphasis, jangan berlebihan
@@ -262,10 +262,14 @@ Jumlah bagian: $partCount
     }
 
     private fun cleanPartText(rawText: String): String {
-        val clean = rawText.replaceFirst(
+        val withoutNumbering = rawText.replaceFirst(
             Regex("""^\s*(\d+\s*/\s*\d+|bagian\s*\d+|part\s*\d+|\d+[.)])\s*[:\-\.]?\s*""", RegexOption.IGNORE_CASE),
             ""
         ).trim()
+        val withoutHashtags = withoutNumbering.replace(Regex("""#[a-zA-Z0-9_\p{L}]+"""), "").trim()
+        val clean = withoutHashtags.replace(Regex("""[ \t]+"""), " ")
+            .replace(Regex("""\n{3,}"""), "\n\n")
+            .trim()
         return if (clean.length > 500) clean.take(497) + "..." else clean
     }
 
@@ -290,7 +294,7 @@ Jumlah bagian: $partCount
             .writeTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
             .build()
 
-        val userAgent = "Mozilla/5.0 (Linux; Android 14; Mobile; ThreadCraft)"
+        val userAgent = "Mozilla/5.0 (Linux; Android 14; Mobile; ThreadsCraft)"
 
         // 1. Primary: pomf.lain.la (not blocked by Indonesian ISPs, permanent hosting)
         try {
