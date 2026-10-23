@@ -127,7 +127,7 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val threadIds = repo.postToThreads(s.generatedParts)
+                val threadIds = repo.postToThreads(s.generatedParts, s.mediaUris)
                 repo.savePost(
                     PostHistory(
                         productTitle = s.productTitle,

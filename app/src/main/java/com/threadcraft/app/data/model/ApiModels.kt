@@ -51,3 +51,9 @@ data class ThreadsCreateResponse(
 data class ThreadsPublishResponse(
     val id: String
 )
+
+data class ThreadsContainerStatusResponse(
+    val id: String,
+    val status: String? = null,
+    val error_message: String? = null
+)

@@ -1,5 +1,6 @@
 package com.threadcraft.app.data.remote
 
+import com.threadcraft.app.data.model.ThreadsContainerStatusResponse
 import com.threadcraft.app.data.model.ThreadsCreateResponse
 import com.threadcraft.app.data.model.ThreadsLongLivedTokenResponse
 import com.threadcraft.app.data.model.ThreadsPublishResponse
@@ -41,11 +42,21 @@ interface ThreadsApiService {
     @FormUrlEncoded
     suspend fun createThread(
         @Path("user_id") userId: String,
-        @Field("media_type") mediaType: String = "TEXT",
-        @Field("text") text: String,
+        @Field("media_type") mediaType: String,
         @Field("access_token") accessToken: String,
+        @Field("text") text: String? = null,
+        @Field("image_url") imageUrl: String? = null,
+        @Field("is_carousel_item") isCarouselItem: Boolean? = null,
+        @Field("children") children: String? = null,
         @Field("reply_to_id") replyToId: String? = null
     ): ThreadsCreateResponse
+
+    @GET("v1.0/{container_id}")
+    suspend fun getContainerStatus(
+        @Path("container_id") containerId: String,
+        @Query("fields") fields: String = "id,status,error_message",
+        @Query("access_token") accessToken: String
+    ): ThreadsContainerStatusResponse
 
     @POST("v1.0/{user_id}/threads_publish")
     @FormUrlEncoded

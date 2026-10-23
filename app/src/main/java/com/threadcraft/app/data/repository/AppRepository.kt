@@ -1,6 +1,7 @@
 package com.threadcraft.app.data.repository
 
 import android.content.Context
+import android.net.Uri
 import com.threadcraft.app.ThreadCraftApp
 import com.threadcraft.app.data.local.AppDatabase
 import com.threadcraft.app.data.local.SecurePrefs
@@ -13,6 +14,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
@@ -170,17 +173,18 @@ Tugasmu membuat konten thread yang menarik untuk affiliate marketing.
 
 ATURAN KETAT:
 1. Buat TEPAT $partCount bagian thread
-2. Setiap bagian MAKSIMAL 480 karakter (sisakan ruang untuk numbering)
-3. Bagian pertama harus hook yang bikin orang berhenti scroll
-4. Bagian terakhir harus CTA dengan link affiliate
-5. Gunakan bahasa Indonesia yang natural dan engaging
-6. JANGAN gunakan hashtag berlebihan, maksimal 2-3 di bagian terakhir
-7. Sisipkan link affiliate ($affiliateLink) HANYA di bagian terakhir
-8. Setiap bagian harus bisa berdiri sendiri tapi tetap nyambung
-9. Gunakan emoji secukupnya untuk emphasis, jangan berlebihan
+2. Setiap bagian MAKSIMAL 480 karakter
+3. JANGAN tambahkan penomoran seperti 1/5, 2/5, Part 1, atau Bagian 1 di awal teks bagian manapun
+4. Bagian pertama harus hook yang bikin orang berhenti scroll
+5. Bagian terakhir harus CTA dengan link affiliate
+6. Gunakan bahasa Indonesia yang natural dan engaging
+7. JANGAN gunakan hashtag berlebihan, maksimal 2-3 di bagian terakhir
+8. Sisipkan link affiliate ($affiliateLink) HANYA di bagian terakhir
+9. Setiap bagian harus bisa berdiri sendiri tapi tetap nyambung
+10. Gunakan emoji secukupnya untuk emphasis, jangan berlebihan
 
 FORMAT OUTPUT:
-Tulis setiap bagian dipisahkan dengan tanda ===PART=== (tanpa numbering, numbering akan ditambahkan otomatis)
+Tulis setiap bagian murni hanya isi postingan tanpa label nomor apapun, dipisahkan dengan tanda ===PART===
 
 GAYA PENULISAN:
 $styleInstruction
@@ -253,12 +257,81 @@ Jumlah bagian: $partCount
                 .filter { it.isNotBlank() }
         }
 
-        parts.mapIndexed { index, part ->
-            "${index + 1}/${parts.size} $part"
+        val cleaned = parts.map { cleanPartText(it) }.filter { it.isNotBlank() }
+        if (cleaned.isNotEmpty()) cleaned else parts
+    }
+
+    private fun cleanPartText(rawText: String): String {
+        val clean = rawText.replaceFirst(
+            Regex("""^\s*(\d+\s*/\s*\d+|bagian\s*\d+|part\s*\d+|\d+[.)])\s*[:\-\.]?\s*""", RegexOption.IGNORE_CASE),
+            ""
+        ).trim()
+        return if (clean.length > 500) clean.take(497) + "..." else clean
+    }
+
+    private suspend fun uploadMediaToPublicUrl(uri: Uri): String = withContext(Dispatchers.IO) {
+        val contentResolver = appContext.contentResolver
+        val inputStream = contentResolver.openInputStream(uri)
+            ?: throw IOException("Gagal membuka file media")
+
+        val bytes = inputStream.use { it.readBytes() }
+        val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
+        val extension = when {
+            mimeType.contains("png", ignoreCase = true) -> "png"
+            mimeType.contains("webp", ignoreCase = true) -> "webp"
+            else -> "jpg"
+        }
+
+        val mediaType = mimeType.toMediaTypeOrNull() ?: "image/jpeg".toMediaType()
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("reqtype", "fileupload")
+            .addFormDataPart(
+                "fileToUpload",
+                "media_${System.currentTimeMillis()}.$extension",
+                bytes.toRequestBody(mediaType)
+            )
+            .build()
+
+        val request = Request.Builder()
+            .url("https://catbox.moe/user/api.php")
+            .post(requestBody)
+            .build()
+
+        val response = RetrofitClient.okHttpClient.newCall(request).execute()
+        val rawResponse = response.body?.string()?.trim() ?: ""
+
+        if (!response.isSuccessful || !rawResponse.startsWith("http")) {
+            throw IOException("Gagal upload media ke server hosting: ${rawResponse.take(150)}")
+        }
+
+        rawResponse
+    }
+
+    private suspend fun waitForContainerReady(containerId: String, token: String) {
+        var attempts = 0
+        while (attempts < 12) {
+            delay(3000)
+            attempts++
+            try {
+                val statusResp = threadsService.getContainerStatus(containerId = containerId, accessToken = token)
+                val st = statusResp.status?.uppercase()
+                if (st == "FINISHED") {
+                    return
+                }
+                if (st == "ERROR" || st == "EXPIRED") {
+                    throw IOException("Status media Threads gagal: $st (${statusResp.error_message ?: "Unknown error"})")
+                }
+            } catch (e: Exception) {
+                if (e is IOException && e.message?.startsWith("Status media Threads gagal") == true) {
+                    throw e
+                }
+                if (attempts >= 10) return
+            }
         }
     }
 
-    suspend fun postToThreads(parts: List<String>): List<String> = withContext(Dispatchers.IO) {
+    suspend fun postToThreads(parts: List<String>, mediaUris: List<Uri> = emptyList()): List<String> = withContext(Dispatchers.IO) {
         val userId = prefs.threadsUserId.ifBlank { "me" }
         val token = prefs.threadsAccessToken.trim()
         if (token.isBlank()) {
@@ -266,17 +339,61 @@ Jumlah bagian: $partCount
         }
         val postedIds = mutableListOf<String>()
 
+        val publicMediaUrls = mutableListOf<String>()
+        if (mediaUris.isNotEmpty()) {
+            for (uri in mediaUris) {
+                try {
+                    val publicUrl = uploadMediaToPublicUrl(uri)
+                    publicMediaUrls.add(publicUrl)
+                } catch (e: Exception) {
+                    throw IOException("Gagal upload media ke server: ${e.message}")
+                }
+            }
+        }
+
         for ((index, rawText) in parts.withIndex()) {
-            val text = if (rawText.length > 500) rawText.take(497) + "..." else rawText
+            val text = cleanPartText(rawText)
             val replyToId = postedIds.lastOrNull()
 
             val createResponse = try {
-                threadsService.createThread(
-                    userId = userId,
-                    text = text,
-                    accessToken = token,
-                    replyToId = replyToId
-                )
+                if (index == 0 && publicMediaUrls.size == 1) {
+                    threadsService.createThread(
+                        userId = userId,
+                        mediaType = "IMAGE",
+                        text = text,
+                        imageUrl = publicMediaUrls.first(),
+                        accessToken = token
+                    )
+                } else if (index == 0 && publicMediaUrls.size > 1) {
+                    val itemIds = mutableListOf<String>()
+                    for (imgUrl in publicMediaUrls.take(10)) {
+                        val itemContainer = threadsService.createThread(
+                            userId = userId,
+                            mediaType = "IMAGE",
+                            imageUrl = imgUrl,
+                            isCarouselItem = true,
+                            accessToken = token
+                        )
+                        itemIds.add(itemContainer.id)
+                        delay(1000)
+                    }
+                    delay(5000)
+                    threadsService.createThread(
+                        userId = userId,
+                        mediaType = "CAROUSEL",
+                        children = itemIds.joinToString(","),
+                        text = text,
+                        accessToken = token
+                    )
+                } else {
+                    threadsService.createThread(
+                        userId = userId,
+                        mediaType = "TEXT",
+                        text = text,
+                        accessToken = token,
+                        replyToId = replyToId
+                    )
+                }
             } catch (e: retrofit2.HttpException) {
                 val errBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null } ?: ""
                 val msg = try {
@@ -290,7 +407,11 @@ Jumlah bagian: $partCount
                 throw IOException("Gagal buat container (Bagian ${index + 1}/${parts.size}): HTTP ${e.code()} - $msg")
             }
 
-            delay(2500)
+            if (index == 0 && publicMediaUrls.isNotEmpty()) {
+                waitForContainerReady(createResponse.id, token)
+            } else {
+                delay(2500)
+            }
 
             val publishResponse = try {
                 threadsService.publishThread(
