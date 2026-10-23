@@ -397,9 +397,7 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                         },
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RectangleShape,
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(Accent)
-                        )
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Accent)
                     ) {
                         Icon(Icons.Default.Schedule, contentDescription = null, tint = Accent, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))

@@ -223,9 +223,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         onClick = { viewModel.startOAuth() },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape = RectangleShape,
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(Accent)
-                        )
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Accent)
                     ) {
                         Icon(Icons.Default.Person, contentDescription = null, tint = Accent)
                         Spacer(Modifier.width(8.dp))

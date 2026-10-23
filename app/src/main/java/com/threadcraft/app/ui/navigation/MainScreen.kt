@@ -5,11 +5,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.threadcraft.app.data.local.SecurePrefs
 import com.threadcraft.app.ui.AppViewModelFactory
@@ -23,44 +25,33 @@ import com.threadcraft.app.ui.splash.SplashScreen
 
 @Composable
 fun MainScreen(prefs: SecurePrefs) {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    val factory = AppViewModelFactory(prefs)
+    var isSplashVisible by remember { mutableStateOf(true) }
 
-    val showBottomBar = currentRoute in listOf(
-        Screen.CreatePost.route,
-        Screen.History.route,
+    if (isSplashVisible) {
+        SplashScreen(onFinished = { isSplashVisible = false })
+        return
+    }
+
+    val navController = rememberNavController()
+    val factory = remember { AppViewModelFactory(prefs) }
+
+    val startDestination = if (prefs.isSetupComplete && prefs.isThreadsConnected) {
+        Screen.CreatePost.route
+    } else {
         Screen.Settings.route
-    )
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (showBottomBar) {
-                BottomNavBar(navController = navController)
-            }
+            BottomNavBar(navController = navController)
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Splash.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Splash.route) {
-                SplashScreen(
-                    onNavigate = {
-                        val destination = if (prefs.isSetupComplete && prefs.isThreadsConnected) {
-                            Screen.CreatePost.route
-                        } else {
-                            Screen.Settings.route
-                        }
-                        navController.navigate(destination) {
-                            popUpTo(Screen.Splash.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
             composable(Screen.CreatePost.route) {
                 val createPostViewModel: CreatePostViewModel = viewModel(factory = factory)
                 CreatePostScreen(viewModel = createPostViewModel)
