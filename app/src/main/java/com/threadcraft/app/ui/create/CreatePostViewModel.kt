@@ -196,7 +196,10 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     try {
                         val input = appContext.contentResolver.openInputStream(uri)
                         if (input != null) {
-                            val destFile = File(appContext.filesDir, "sched_${System.currentTimeMillis()}_$index.jpg")
+                            val type = appContext.contentResolver.getType(uri) ?: ""
+                            val isVid = type.startsWith("video", ignoreCase = true) || uri.toString().endsWith(".mp4", ignoreCase = true)
+                            val ext = if (isVid) "mp4" else "jpg"
+                            val destFile = File(appContext.filesDir, "sched_${System.currentTimeMillis()}_$index.$ext")
                             destFile.outputStream().use { out -> input.copyTo(out) }
                             savedMediaPaths.add(destFile.absolutePath)
                         }

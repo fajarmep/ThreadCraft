@@ -22,6 +22,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 
+data class UploadedMedia(val url: String, val isVideo: Boolean)
+
 class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
 
     private val appContext = context?.applicationContext ?: ThreadCraftApp.instance
@@ -275,25 +277,30 @@ Jumlah bagian: $partCount
         return if (clean.length > 500) clean.take(497) + "..." else clean
     }
 
-    private suspend fun uploadMediaToPublicUrl(uri: Uri): String = withContext(Dispatchers.IO) {
+    private suspend fun uploadMediaToPublicUrl(uri: Uri): UploadedMedia = withContext(Dispatchers.IO) {
         val contentResolver = appContext.contentResolver
         val inputStream = contentResolver.openInputStream(uri)
             ?: throw IOException("Gagal membuka file media")
 
         val bytes = inputStream.use { it.readBytes() }
-        val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
+        val rawMime = contentResolver.getType(uri) ?: ""
+        val isVideo = rawMime.startsWith("video", ignoreCase = true) ||
+            uri.toString().endsWith(".mp4", ignoreCase = true) ||
+            uri.toString().endsWith(".mov", ignoreCase = true)
+
         val extension = when {
-            mimeType.contains("png", ignoreCase = true) -> "png"
-            mimeType.contains("webp", ignoreCase = true) -> "webp"
+            isVideo -> "mp4"
+            rawMime.contains("png", ignoreCase = true) -> "png"
+            rawMime.contains("webp", ignoreCase = true) -> "webp"
             else -> "jpg"
         }
         val filename = "tc_${System.currentTimeMillis()}.$extension"
-        val mediaType = mimeType.toMediaTypeOrNull() ?: "image/jpeg".toMediaType()
+        val mediaType = (if (isVideo) "video/mp4" else if (rawMime.isNotBlank()) rawMime else "image/jpeg").toMediaType()
 
         val fastClient = RetrofitClient.okHttpClient.newBuilder()
-            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .connectTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(45, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(45, java.util.concurrent.TimeUnit.SECONDS)
             .build()
 
         val userAgent = "Mozilla/5.0 (Linux; Android 14; Mobile; ThreadsCraft)"
@@ -318,7 +325,7 @@ Jumlah bagian: $partCount
                 val files = json.optJSONArray("files")
                 val url = files?.optJSONObject(0)?.optString("url")
                 if (!url.isNullOrBlank()) {
-                    return@withContext url.replace("\\/", "/")
+                    return@withContext UploadedMedia(url.replace("\\/", "/"), isVideo)
                 }
             }
         } catch (e: Exception) {
@@ -345,7 +352,7 @@ Jumlah bagian: $partCount
                 val files = json.optJSONArray("files")
                 val url = files?.optJSONObject(0)?.optString("url")
                 if (!url.isNullOrBlank()) {
-                    return@withContext url.replace("\\/", "/")
+                    return@withContext UploadedMedia(url.replace("\\/", "/"), isVideo)
                 }
             }
         } catch (e: Exception) {
@@ -369,7 +376,7 @@ Jumlah bagian: $partCount
             val resp = fastClient.newCall(req).execute()
             val rawResponse = resp.body?.string()?.trim() ?: ""
             if (resp.isSuccessful && rawResponse.startsWith("http")) {
-                return@withContext rawResponse
+                return@withContext UploadedMedia(rawResponse, isVideo)
             }
         } catch (e: Exception) {
             android.util.Log.w("AppRepository", "catbox.moe upload failed: ${e.message}")
@@ -380,7 +387,7 @@ Jumlah bagian: $partCount
 
     private suspend fun waitForContainerReady(containerId: String, token: String) {
         var attempts = 0
-        while (attempts < 12) {
+        while (attempts < 30) {
             delay(3000)
             attempts++
             try {
@@ -396,7 +403,7 @@ Jumlah bagian: $partCount
                 if (e is IOException && e.message?.startsWith("Status media Threads gagal") == true) {
                     throw e
                 }
-                if (attempts >= 10) return
+                if (attempts >= 25) return
             }
         }
     }
@@ -409,12 +416,12 @@ Jumlah bagian: $partCount
         }
         val postedIds = mutableListOf<String>()
 
-        val publicMediaUrls = mutableListOf<String>()
+        val publicMediaList = mutableListOf<UploadedMedia>()
         if (mediaUris.isNotEmpty()) {
             for (uri in mediaUris) {
                 try {
-                    val publicUrl = uploadMediaToPublicUrl(uri)
-                    publicMediaUrls.add(publicUrl)
+                    val uploaded = uploadMediaToPublicUrl(uri)
+                    publicMediaList.add(uploaded)
                 } catch (e: Exception) {
                     throw IOException("Gagal upload media ke server: ${e.message}")
                 }
@@ -426,28 +433,50 @@ Jumlah bagian: $partCount
             val replyToId = postedIds.lastOrNull()
 
             val createResponse = try {
-                if (index == 0 && publicMediaUrls.size == 1) {
-                    threadsService.createThread(
-                        userId = userId,
-                        mediaType = "IMAGE",
-                        text = text,
-                        imageUrl = publicMediaUrls.first(),
-                        accessToken = token
-                    )
-                } else if (index == 0 && publicMediaUrls.size > 1) {
-                    val itemIds = mutableListOf<String>()
-                    for (imgUrl in publicMediaUrls.take(10)) {
-                        val itemContainer = threadsService.createThread(
+                if (index == 0 && publicMediaList.size == 1) {
+                    val m = publicMediaList.first()
+                    if (m.isVideo) {
+                        threadsService.createThread(
                             userId = userId,
-                            mediaType = "IMAGE",
-                            imageUrl = imgUrl,
-                            isCarouselItem = true,
+                            mediaType = "VIDEO",
+                            text = text,
+                            videoUrl = m.url,
                             accessToken = token
                         )
+                    } else {
+                        threadsService.createThread(
+                            userId = userId,
+                            mediaType = "IMAGE",
+                            text = text,
+                            imageUrl = m.url,
+                            accessToken = token
+                        )
+                    }
+                } else if (index == 0 && publicMediaList.size > 1) {
+                    val itemIds = mutableListOf<String>()
+                    for (m in publicMediaList.take(10)) {
+                        val itemContainer = if (m.isVideo) {
+                            threadsService.createThread(
+                                userId = userId,
+                                mediaType = "VIDEO",
+                                videoUrl = m.url,
+                                isCarouselItem = true,
+                                accessToken = token
+                            )
+                        } else {
+                            threadsService.createThread(
+                                userId = userId,
+                                mediaType = "IMAGE",
+                                imageUrl = m.url,
+                                isCarouselItem = true,
+                                accessToken = token
+                            )
+                        }
                         itemIds.add(itemContainer.id)
+                        waitForContainerReady(itemContainer.id, token)
                         delay(1000)
                     }
-                    delay(5000)
+                    delay(3000)
                     threadsService.createThread(
                         userId = userId,
                         mediaType = "CAROUSEL",
@@ -477,7 +506,7 @@ Jumlah bagian: $partCount
                 throw IOException("Gagal buat container (Bagian ${index + 1}/${parts.size}): HTTP ${e.code()} - $msg")
             }
 
-            if (index == 0 && publicMediaUrls.isNotEmpty()) {
+            if (index == 0 && publicMediaList.isNotEmpty()) {
                 waitForContainerReady(createResponse.id, token)
             } else {
                 delay(2500)

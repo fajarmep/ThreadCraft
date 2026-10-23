@@ -3,6 +3,7 @@ package com.threadcraft.app.ui.create
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -75,7 +76,7 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
     val context = LocalContext.current
 
     val mediaPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10)
     ) { uris ->
         if (uris.isNotEmpty()) viewModel.addMedia(uris)
     }
@@ -178,7 +179,11 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                         .size(80.dp)
                         .background(SurfaceVariant, RectangleShape)
                         .border(1.dp, Outline, RectangleShape)
-                        .clickable { mediaPickerLauncher.launch("image/*") },
+                        .clickable {
+                            mediaPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                            )
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -189,6 +194,11 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
 
                 // Media preview thumbnails
                 state.mediaUris.forEach { uri ->
+                    val isVideo = remember(uri) {
+                        val type = context.contentResolver.getType(uri) ?: ""
+                        type.startsWith("video", ignoreCase = true) || uri.toString().endsWith(".mp4", ignoreCase = true)
+                    }
+
                     Box(modifier = Modifier.size(80.dp)) {
                         AsyncImage(
                             model = uri,
@@ -196,6 +206,20 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
+                        if (isVideo) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .background(Accent)
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    "VIDEO",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = OnAccent
+                                )
+                            }
+                        }
                         IconButton(
                             onClick = { viewModel.removeMedia(uri) },
                             modifier = Modifier

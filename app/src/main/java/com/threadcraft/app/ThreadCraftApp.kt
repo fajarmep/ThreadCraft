@@ -2,12 +2,24 @@ package com.threadcraft.app
 
 import android.app.Application
 import android.util.Log
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.decode.VideoFrameDecoder
 import com.threadcraft.app.data.local.AppDatabase
 
-class ThreadCraftApp : Application() {
+class ThreadCraftApp : Application(), ImageLoaderFactory {
 
     val database: AppDatabase
         get() = AppDatabase.getDatabase(this)
+
+    override fun newImageLoader(): ImageLoader {
+        return ImageLoader.Builder(this)
+            .components {
+                add(VideoFrameDecoder.Factory())
+            }
+            .crossfade(true)
+            .build()
+    }
 
     override fun onCreate() {
         super.onCreate()

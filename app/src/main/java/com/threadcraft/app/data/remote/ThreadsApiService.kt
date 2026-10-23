@@ -46,6 +46,7 @@ interface ThreadsApiService {
         @Field("access_token") accessToken: String,
         @Field("text") text: String? = null,
         @Field("image_url") imageUrl: String? = null,
+        @Field("video_url") videoUrl: String? = null,
         @Field("is_carousel_item") isCarouselItem: Boolean? = null,
         @Field("children") children: String? = null,
         @Field("reply_to_id") replyToId: String? = null
