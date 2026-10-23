@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 
 data class SettingsState(
     val aiBaseUrl: String = "",
-    val aiApiKey: *** = "",
+    val aiApiKey: String = "",
     val aiModel: String = "",
     val threadsAppId: String = "",
     val threadsAppSecret: String = "",
