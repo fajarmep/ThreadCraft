@@ -8,8 +8,10 @@ import com.threadcraft.app.data.model.AiMessage
 import com.threadcraft.app.data.model.AiRequest
 import com.threadcraft.app.data.model.PostHistory
 import com.threadcraft.app.data.remote.RetrofitClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
 
@@ -31,13 +33,34 @@ class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
 
     suspend fun getDueScheduled(now: Long) = dao.getDueScheduled(now)
 
+    private fun resolveChatCompletionUrl(rawUrl: String): String {
+        var clean = rawUrl.trim()
+        if (clean.isBlank()) throw IllegalArgumentException("AI Base URL belum diisi")
+        if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+            clean = "https://$clean"
+        }
+        return if (clean.endsWith("/chat/completions")) {
+            clean
+        } else if (clean.endsWith("/")) {
+            "${clean}chat/completions"
+        } else {
+            "$clean/chat/completions"
+        }
+    }
+
+    private fun cleanApiKey(rawKey: String): String {
+        val clean = rawKey.trim().replace("\r", "").replace("\n", "")
+        if (clean.isBlank()) throw IllegalArgumentException("API Key belum diisi")
+        return clean
+    }
+
     suspend fun generateContent(
         productTitle: String,
         description: String,
         affiliateLink: String,
         style: String,
         numParts: Int?
-    ): List<String> {
+    ): List<String> = withContext(Dispatchers.IO) {
         val styleInstruction = when (style) {
             "Cerpen Storytelling" -> """
                 Tulis cerita pendek yang menarik dan emosional tentang seseorang yang mengalami masalah,
@@ -92,14 +115,14 @@ Link Affiliate: $affiliateLink
 Jumlah bagian: $partCount
         """.trimIndent()
 
-        val baseUrl = prefs.aiBaseUrl.trimEnd('/')
-        val url = "$baseUrl/chat/completions"
+        val url = resolveChatCompletionUrl(prefs.aiBaseUrl)
+        val apiKey = cleanApiKey(prefs.aiApiKey)
 
         val response = aiService.generateCompletion(
             url = url,
-            authHeader = "Bearer ${prefs.aiApiKey}",
+            authHeader = "Bearer $apiKey",
             request = AiRequest(
-                model = prefs.aiModel,
+                model = prefs.aiModel.trim().ifBlank { "gpt-4o-mini" },
                 messages = listOf(
                     AiMessage("system", systemPrompt),
                     AiMessage("user", userPrompt)
@@ -107,17 +130,17 @@ Jumlah bagian: $partCount
             )
         )
 
-        val content = response.choices.firstOrNull()?.message?.content ?: ""
+        val content = response.choices?.firstOrNull()?.message?.content ?: ""
         val parts = content.split("===PART===")
             .map { it.trim() }
             .filter { it.isNotBlank() }
 
-        return parts.mapIndexed { index, part ->
+        parts.mapIndexed { index, part ->
             "${index + 1}/${parts.size} $part"
         }
     }
 
-    suspend fun postToThreads(parts: List<String>): List<String> {
+    suspend fun postToThreads(parts: List<String>): List<String> = withContext(Dispatchers.IO) {
         val userId = prefs.threadsUserId
         val token = prefs.threadsAccessToken
         val postedIds = mutableListOf<String>()
@@ -132,7 +155,6 @@ Jumlah bagian: $partCount
                 replyToId = replyToId
             )
 
-            // Wait for container to be ready
             delay(2000)
 
             val publishResponse = threadsService.publishThread(
@@ -143,26 +165,23 @@ Jumlah bagian: $partCount
 
             postedIds.add(publishResponse.id)
 
-            // Rate limit between posts
             if (index < parts.size - 1) {
                 delay(3000)
             }
         }
 
-        return postedIds
+        postedIds
     }
 
-    suspend fun testAiConnection(): String {
-        val baseUrl = prefs.aiBaseUrl.trim()
-        val apiKey = prefs.aiApiKey.trim()
-        val model = prefs.aiModel.trim()
+    suspend fun testAiConnection(): String = withContext(Dispatchers.IO) {
+        val rawBaseUrl = prefs.aiBaseUrl
+        val rawApiKey = prefs.aiApiKey
+        val model = prefs.aiModel.trim().ifBlank { "gpt-4o-mini" }
 
-        if (baseUrl.isBlank()) throw IllegalArgumentException("AI Base URL belum diisi")
-        if (apiKey.isBlank()) throw IllegalArgumentException("AI API Key belum diisi")
-        if (model.isBlank()) throw IllegalArgumentException("AI Model belum diisi")
-
-        val url = if (baseUrl.endsWith("/")) "${baseUrl}chat/completions" else "$baseUrl/chat/completions"
+        val url = resolveChatCompletionUrl(rawBaseUrl)
+        val apiKey = cleanApiKey(rawApiKey)
         val authHeader = "Bearer $apiKey"
+
         val testRequest = AiRequest(
             model = model,
             messages = listOf(AiMessage("user", "Hello, test connection. Reply with 'OK'.")),
@@ -171,18 +190,23 @@ Jumlah bagian: $partCount
         )
 
         val response = aiService.generateCompletion(url, authHeader, testRequest)
-        val reply = response.choices.firstOrNull()?.message?.content?.trim()
-            ?: throw IllegalStateException("Model tidak memberikan respon")
-        return reply
+        val reply = response.choices?.firstOrNull()?.message?.content?.trim()
+        if (!reply.isNullOrBlank()) {
+            return@withContext reply
+        }
+        if (response.error?.message != null) {
+            throw IllegalStateException(response.error.message)
+        }
+        return@withContext "OK"
     }
 
-    suspend fun exchangeToken(code: String): Pair<String, String> {
+    suspend fun exchangeToken(code: String): Pair<String, String> = withContext(Dispatchers.IO) {
         val redirectUri = prefs.redirectUri.ifBlank { "https://threadcraft.app/callback" }
         val response = threadsService.getAccessToken(
-            clientId = prefs.threadsAppId,
-            clientSecret = prefs.threadsAppSecret,
+            clientId = prefs.threadsAppId.trim(),
+            clientSecret = prefs.threadsAppSecret.trim(),
             redirectUri = redirectUri,
-            code = code
+            code = code.trim()
         )
         prefs.threadsAccessToken = response.access_token
         prefs.threadsUserId = response.user_id.toString()
@@ -190,6 +214,6 @@ Jumlah bagian: $partCount
         val profile = threadsService.getProfile(accessToken = response.access_token)
         prefs.threadsUsername = profile.username
 
-        return Pair(profile.username, response.user_id.toString())
+        Pair(profile.username, response.user_id.toString())
     }
 }

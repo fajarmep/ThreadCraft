@@ -94,10 +94,20 @@ class SettingsViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     isTestingAi = false,
                     aiTestMessage = "Koneksi Berhasil! Model menjawab: \"$reply\""
                 )
-            } catch (e: Exception) {
+            } catch (t: Throwable) {
+                android.util.Log.e("SettingsViewModel", "AI connection test error", t)
+                val errorMsg = when (t) {
+                    is retrofit2.HttpException -> {
+                        val body = try {
+                            t.response()?.errorBody()?.string()
+                        } catch (_: Exception) { null }
+                        "HTTP ${t.code()}: ${body?.take(150) ?: t.message()}"
+                    }
+                    else -> t.localizedMessage ?: t.message ?: "Koneksi gagal"
+                }
                 _state.value = _state.value.copy(
                     isTestingAi = false,
-                    error = "Test AI gagal: ${e.localizedMessage ?: e.message}"
+                    error = "Test AI gagal: $errorMsg"
                 )
             }
         }

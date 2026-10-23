@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -170,7 +170,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     Text("Menguji koneksi AI...", color = Accent)
                 } else {
                     Icon(
-                        Icons.Default.Bolt,
+                        Icons.Default.PlayArrow,
                         contentDescription = null,
                         tint = Accent,
                         modifier = Modifier.size(18.dp)

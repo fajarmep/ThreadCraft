@@ -8,16 +8,23 @@ data class AiRequest(
 )
 
 data class AiMessage(
-    val role: String,
-    val content: String
+    val role: String? = "user",
+    val content: String? = ""
 )
 
 data class AiResponse(
-    val choices: List<AiChoice>
+    val choices: List<AiChoice>? = null,
+    val error: AiErrorResponse? = null
 )
 
 data class AiChoice(
-    val message: AiMessage
+    val message: AiMessage? = null
+)
+
+data class AiErrorResponse(
+    val message: String? = null,
+    val type: String? = null,
+    val code: String? = null
 )
 
 data class ThreadsTokenResponse(
