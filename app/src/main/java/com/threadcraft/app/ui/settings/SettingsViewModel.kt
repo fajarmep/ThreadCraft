@@ -12,16 +12,19 @@ import kotlinx.coroutines.launch
 
 data class SettingsState(
     val aiBaseUrl: String = "",
-    val aiApiKey: String = "",
+    val aiApiKey: *** = "",
     val aiModel: String = "",
     val threadsAppId: String = "",
     val threadsAppSecret: String = "",
     val threadsUsername: String = "",
+    val redirectUri: String = "https://threadcraft.app/callback",
     val isThreadsConnected: Boolean = false,
     val showOAuthWebView: Boolean = false,
     val oauthUrl: String = "",
     val isSaving: Boolean = false,
     val isExchangingToken: Boolean = false,
+    val isTestingAi: Boolean = false,
+    val aiTestMessage: String? = null,
     val saveSuccess: Boolean = false,
     val error: String? = null
 )
@@ -44,6 +47,7 @@ class SettingsViewModel(private val prefs: SecurePrefs) : ViewModel() {
             threadsAppId = prefs.threadsAppId,
             threadsAppSecret = prefs.threadsAppSecret,
             threadsUsername = prefs.threadsUsername,
+            redirectUri = prefs.redirectUri.ifBlank { "https://threadcraft.app/callback" },
             isThreadsConnected = prefs.isThreadsConnected
         )
     }
@@ -53,20 +57,58 @@ class SettingsViewModel(private val prefs: SecurePrefs) : ViewModel() {
     fun updateAiModel(v: String) { _state.value = _state.value.copy(aiModel = v) }
     fun updateThreadsAppId(v: String) { _state.value = _state.value.copy(threadsAppId = v) }
     fun updateThreadsAppSecret(v: String) { _state.value = _state.value.copy(threadsAppSecret = v) }
+    fun updateRedirectUri(v: String) { _state.value = _state.value.copy(redirectUri = v) }
 
     fun save() {
         val s = _state.value
-        prefs.aiBaseUrl = s.aiBaseUrl
-        prefs.aiApiKey = s.aiApiKey
-        prefs.aiModel = s.aiModel
-        prefs.threadsAppId = s.threadsAppId
-        prefs.threadsAppSecret = s.threadsAppSecret
+        prefs.aiBaseUrl = s.aiBaseUrl.trim()
+        prefs.aiApiKey = s.aiApiKey.trim()
+        prefs.aiModel = s.aiModel.trim()
+        prefs.threadsAppId = s.threadsAppId.trim()
+        prefs.threadsAppSecret = s.threadsAppSecret.trim()
+        prefs.redirectUri = s.redirectUri.trim().ifBlank { "https://threadcraft.app/callback" }
         prefs.isSetupComplete = true
         _state.value = s.copy(saveSuccess = true)
     }
 
+    fun testAiConnection() {
+        val s = _state.value
+        val baseUrl = s.aiBaseUrl.trim()
+        val apiKey = s.aiApiKey.trim()
+        val model = s.aiModel.trim()
+
+        if (baseUrl.isBlank() || apiKey.isBlank() || model.isBlank()) {
+            _state.value = s.copy(error = "Lengkapi AI Base URL, API Key, dan Model terlebih dahulu")
+            return
+        }
+
+        prefs.aiBaseUrl = baseUrl
+        prefs.aiApiKey = apiKey
+        prefs.aiModel = model
+
+        _state.value = _state.value.copy(isTestingAi = true, aiTestMessage = null, error = null)
+        viewModelScope.launch {
+            try {
+                val reply = repo.testAiConnection()
+                _state.value = _state.value.copy(
+                    isTestingAi = false,
+                    aiTestMessage = "Koneksi Berhasil! Model menjawab: \"$reply\""
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isTestingAi = false,
+                    error = "Test AI gagal: ${e.localizedMessage ?: e.message}"
+                )
+            }
+        }
+    }
+
     fun clearSaveSuccess() {
         _state.value = _state.value.copy(saveSuccess = false)
+    }
+
+    fun clearAiTestMessage() {
+        _state.value = _state.value.copy(aiTestMessage = null)
     }
 
     fun startOAuth() {
@@ -75,10 +117,14 @@ class SettingsViewModel(private val prefs: SecurePrefs) : ViewModel() {
             _state.value = s.copy(error = "Threads App ID harus diisi dulu")
             return
         }
-        val redirectUri = "https://threadcraft.app/callback"
+        val targetRedirect = s.redirectUri.trim().ifBlank { "https://threadcraft.app/callback" }
+        prefs.redirectUri = targetRedirect
+        prefs.threadsAppId = s.threadsAppId.trim()
+        prefs.threadsAppSecret = s.threadsAppSecret.trim()
+
         val url = Uri.parse("https://threads.net/oauth/authorize").buildUpon()
-            .appendQueryParameter("client_id", s.threadsAppId)
-            .appendQueryParameter("redirect_uri", redirectUri)
+            .appendQueryParameter("client_id", s.threadsAppId.trim())
+            .appendQueryParameter("redirect_uri", targetRedirect)
             .appendQueryParameter("scope", "threads_basic,threads_content_publish")
             .appendQueryParameter("response_type", "code")
             .build()

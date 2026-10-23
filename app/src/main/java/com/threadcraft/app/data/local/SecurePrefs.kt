@@ -42,6 +42,10 @@ class SecurePrefs(context: Context) {
         get() = prefs.getString(KEY_THREADS_USERNAME, "") ?: ""
         set(value) = prefs.edit().putString(KEY_THREADS_USERNAME, value).apply()
 
+    var redirectUri: String
+        get() = prefs.getString(KEY_REDIRECT_URI, "https://threadcraft.app/callback") ?: "https://threadcraft.app/callback"
+        set(value) = prefs.edit().putString(KEY_REDIRECT_URI, value).apply()
+
     var isSetupComplete: Boolean
         get() = prefs.getBoolean(KEY_SETUP_COMPLETE, false)
         set(value) = prefs.edit().putBoolean(KEY_SETUP_COMPLETE, value).apply()
@@ -66,6 +70,7 @@ class SecurePrefs(context: Context) {
         private const val KEY_THREADS_TOKEN = "threads_access_token"
         private const val KEY_THREADS_USER_ID = "threads_user_id"
         private const val KEY_THREADS_USERNAME = "threads_username"
+        private const val KEY_REDIRECT_URI = "threads_redirect_uri"
         private const val KEY_SETUP_COMPLETE = "setup_complete"
     }
 }

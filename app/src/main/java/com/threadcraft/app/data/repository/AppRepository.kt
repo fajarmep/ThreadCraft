@@ -152,8 +152,32 @@ Jumlah bagian: $partCount
         return postedIds
     }
 
+    suspend fun testAiConnection(): String {
+        val baseUrl = prefs.aiBaseUrl.trim()
+        val apiKey = prefs.aiApiKey.trim()
+        val model = prefs.aiModel.trim()
+
+        if (baseUrl.isBlank()) throw IllegalArgumentException("AI Base URL belum diisi")
+        if (apiKey.isBlank()) throw IllegalArgumentException("AI API Key belum diisi")
+        if (model.isBlank()) throw IllegalArgumentException("AI Model belum diisi")
+
+        val url = if (baseUrl.endsWith("/")) "${baseUrl}chat/completions" else "$baseUrl/chat/completions"
+        val authHeader = "Bearer $apiKey"
+        val testRequest = AiRequest(
+            model = model,
+            messages = listOf(AiMessage("user", "Hello, test connection. Reply with 'OK'.")),
+            max_tokens = 20,
+            temperature = 0.1
+        )
+
+        val response = aiService.generateCompletion(url, authHeader, testRequest)
+        val reply = response.choices.firstOrNull()?.message?.content?.trim()
+            ?: throw IllegalStateException("Model tidak memberikan respon")
+        return reply
+    }
+
     suspend fun exchangeToken(code: String): Pair<String, String> {
-        val redirectUri = "https://threadcraft.app/callback"
+        val redirectUri = prefs.redirectUri.ifBlank { "https://threadcraft.app/callback" }
         val response = threadsService.getAccessToken(
             clientId = prefs.threadsAppId,
             clientSecret = prefs.threadsAppSecret,

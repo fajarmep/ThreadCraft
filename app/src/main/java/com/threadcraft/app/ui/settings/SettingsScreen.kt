@@ -1,9 +1,13 @@
 package com.threadcraft.app.ui.settings
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,11 +22,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
@@ -51,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -66,6 +72,7 @@ import com.threadcraft.app.ui.theme.SurfaceVariant
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(state.saveSuccess) {
         if (state.saveSuccess) {
@@ -84,6 +91,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     if (state.showOAuthWebView) {
         OAuthDialog(
             url = state.oauthUrl,
+            redirectUri = state.redirectUri,
             onCodeReceived = { viewModel.handleOAuthCallback(it) },
             onDismiss = { viewModel.dismissOAuth() }
         )
@@ -140,6 +148,63 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 label = "Model",
                 placeholder = "gpt-4o-mini"
             )
+            Spacer(Modifier.height(10.dp))
+
+            // Tombol Test Koneksi AI
+            OutlinedButton(
+                onClick = { viewModel.testAiConnection() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RectangleShape,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Accent),
+                enabled = !state.isTestingAi
+            ) {
+                if (state.isTestingAi) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = Accent,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Menguji koneksi AI...", color = Accent)
+                } else {
+                    Icon(
+                        Icons.Default.Bolt,
+                        contentDescription = null,
+                        tint = Accent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Test Koneksi AI", color = Accent)
+                }
+            }
+
+            state.aiTestMessage?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceVariant, RectangleShape)
+                        .border(1.dp, SuccessGreen, RectangleShape)
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = SuccessGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = msg,
+                            color = SuccessGreen,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
             SectionHeader("Threads API")
@@ -160,6 +225,47 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 placeholder = "Your Threads App Secret",
                 isPassword = true
             )
+            Spacer(Modifier.height(12.dp))
+
+            FlatTextField(
+                value = state.redirectUri,
+                onValueChange = { viewModel.updateRedirectUri(it) },
+                label = "OAuth Redirect URI",
+                placeholder = "https://threadcraft.app/callback"
+            )
+            Spacer(Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Daftarkan URL ini di Meta Developer App",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("Redirect URI", state.redirectUri)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Redirect URI disalin!", Toast.LENGTH_SHORT).show()
+                    },
+                    shape = RectangleShape,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = null,
+                        tint = Accent,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Salin URI", style = MaterialTheme.typography.labelSmall, color = Accent)
+                }
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -292,6 +398,7 @@ private fun FlatTextField(
 @Composable
 private fun OAuthDialog(
     url: String,
+    redirectUri: String,
     onCodeReceived: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -333,7 +440,7 @@ private fun OAuthDialog(
                                 request: WebResourceRequest?
                             ): Boolean {
                                 val redirectUrl = request?.url?.toString() ?: return false
-                                if (redirectUrl.startsWith("https://threadcraft.app/callback")) {
+                                if (redirectUrl.startsWith(redirectUri)) {
                                     onCodeReceived(redirectUrl)
                                     return true
                                 }
