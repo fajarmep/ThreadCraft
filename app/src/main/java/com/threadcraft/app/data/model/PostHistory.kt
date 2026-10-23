@@ -26,11 +26,16 @@ class Converters {
     private val gson = Gson()
 
     @TypeConverter
-    fun fromStringList(value: List<String>): String = gson.toJson(value)
+    fun fromStringList(value: List<String>?): String = gson.toJson(value ?: emptyList<String>())
 
     @TypeConverter
-    fun toStringList(value: String): List<String> {
-        val type = object : TypeToken<List<String>>() {}.type
-        return gson.fromJson(value, type)
+    fun toStringList(value: String?): List<String> {
+        if (value.isNullOrBlank()) return emptyList()
+        return try {
+            val type = object : TypeToken<List<String>>() {}.type
+            gson.fromJson(value, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 }

@@ -1,6 +1,8 @@
 package com.threadcraft.app.ui.theme
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -8,6 +10,15 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+
+private fun Context.findActivity(): Activity? {
+    var currentContext = this
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext
+        currentContext = currentContext.baseContext
+    }
+    return null
+}
 
 private val DarkColorScheme = darkColorScheme(
     primary = Accent,
@@ -39,10 +50,11 @@ fun ThreadCraftTheme(content: @Composable () -> Unit) {
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = Surface.toArgb()
-            window.navigationBarColor = Surface.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            view.context.findActivity()?.window?.let { window ->
+                window.statusBarColor = Surface.toArgb()
+                window.navigationBarColor = Surface.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            }
         }
     }
 

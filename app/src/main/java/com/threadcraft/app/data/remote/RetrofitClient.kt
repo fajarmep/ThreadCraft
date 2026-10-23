@@ -21,7 +21,7 @@ object RetrofitClient {
 
     val aiService: AiApiService by lazy {
         Retrofit.Builder()
-            .baseUrl("https://placeholder.local/")
+            .baseUrl("https://api.openai.com/v1/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

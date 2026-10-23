@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.threadcraft.app.ui.theme.Accent
 import com.threadcraft.app.ui.theme.Outline
@@ -39,7 +40,7 @@ fun BottomNavBar(navController: NavController) {
                 onClick = {
                     if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {
-                            popUpTo(Screen.CreatePost.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }
                             launchSingleTop = true

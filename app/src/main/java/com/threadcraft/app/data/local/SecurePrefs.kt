@@ -2,22 +2,28 @@ package com.threadcraft.app.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 class SecurePrefs(context: Context) {
 
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    private val prefs: SharedPreferences = try {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
 
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "threadcraft_secure_prefs",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+        EncryptedSharedPreferences.create(
+            context,
+            "threadcraft_secure_prefs",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    } catch (t: Throwable) {
+        Log.e("SecurePrefs", "Failed to initialize EncryptedSharedPreferences, using fallback", t)
+        context.getSharedPreferences("threadcraft_prefs_fallback", Context.MODE_PRIVATE)
+    }
 
     var aiBaseUrl: String
         get() = prefs.getString(KEY_AI_BASE_URL, "") ?: ""

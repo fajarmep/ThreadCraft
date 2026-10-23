@@ -12,12 +12,21 @@ class ThreadCraftApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        database = Room.databaseBuilder(
-            this,
-            AppDatabase::class.java,
-            "threadcraft.db"
-        ).fallbackToDestructiveMigration().build()
-        com.threadcraft.app.worker.PostScheduleWorker.enqueuePeriodicWork(this)
+        try {
+            database = Room.databaseBuilder(
+                this,
+                AppDatabase::class.java,
+                "threadcraft.db"
+            ).fallbackToDestructiveMigration().build()
+        } catch (t: Throwable) {
+            android.util.Log.e("ThreadCraftApp", "Error initializing Room DB", t)
+        }
+
+        try {
+            com.threadcraft.app.worker.PostScheduleWorker.enqueuePeriodicWork(this)
+        } catch (t: Throwable) {
+            android.util.Log.e("ThreadCraftApp", "Error scheduling periodic worker", t)
+        }
     }
 
     companion object {
