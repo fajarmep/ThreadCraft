@@ -12,8 +12,8 @@ android {
         applicationId = "com.threadcraft.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 10
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -21,8 +21,21 @@ android {
         }
     }
 
+    signingConfigs {
+        create("sharedKey") {
+            storeFile = rootProject.file("keystore.jks")
+            storePassword = "threadcraftpass"
+            keyAlias = "threadcraft"
+            keyPassword = "threadcraftpass"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("sharedKey")
+        }
         release {
+            signingConfig = signingConfigs.getByName("sharedKey")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -73,8 +86,6 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
-
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 

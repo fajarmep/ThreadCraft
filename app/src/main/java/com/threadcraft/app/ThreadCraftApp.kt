@@ -1,31 +1,26 @@
 package com.threadcraft.app
 
 import android.app.Application
-import androidx.room.Room
+import android.util.Log
 import com.threadcraft.app.data.local.AppDatabase
 
 class ThreadCraftApp : Application() {
 
-    lateinit var database: AppDatabase
-        private set
+    val database: AppDatabase
+        get() = AppDatabase.getDatabase(this)
 
     override fun onCreate() {
         super.onCreate()
         instance = this
-        try {
-            database = Room.databaseBuilder(
-                this,
-                AppDatabase::class.java,
-                "threadcraft.db"
-            ).fallbackToDestructiveMigration().build()
-        } catch (t: Throwable) {
-            android.util.Log.e("ThreadCraftApp", "Error initializing Room DB", t)
+
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e("ThreadCraftApp", "Uncaught exception in thread ${thread.name}", throwable)
         }
 
         try {
             com.threadcraft.app.worker.PostScheduleWorker.enqueuePeriodicWork(this)
         } catch (t: Throwable) {
-            android.util.Log.e("ThreadCraftApp", "Error scheduling periodic worker", t)
+            Log.e("ThreadCraftApp", "Failed to enqueue periodic worker", t)
         }
     }
 

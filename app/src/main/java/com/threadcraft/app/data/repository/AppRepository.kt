@@ -1,6 +1,8 @@
 package com.threadcraft.app.data.repository
 
+import android.content.Context
 import com.threadcraft.app.ThreadCraftApp
+import com.threadcraft.app.data.local.AppDatabase
 import com.threadcraft.app.data.local.SecurePrefs
 import com.threadcraft.app.data.model.AiMessage
 import com.threadcraft.app.data.model.AiRequest
@@ -9,9 +11,11 @@ import com.threadcraft.app.data.remote.RetrofitClient
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
-class AppRepository(private val prefs: SecurePrefs) {
+class AppRepository(context: Context? = null, private val prefs: SecurePrefs) {
 
-    private val dao = ThreadCraftApp.instance.database.postHistoryDao()
+    private val appContext = context?.applicationContext ?: ThreadCraftApp.instance
+    private val database by lazy { AppDatabase.getDatabase(appContext) }
+    private val dao get() = database.postHistoryDao()
     private val aiService = RetrofitClient.aiService
     private val threadsService = RetrofitClient.threadsService
 
