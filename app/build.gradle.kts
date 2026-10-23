@@ -12,8 +12,8 @@ android {
         applicationId = "com.threadcraft.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 15
-        versionName = "1.0.9"
+        versionCode = 16
+        versionName = "1.0.10"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

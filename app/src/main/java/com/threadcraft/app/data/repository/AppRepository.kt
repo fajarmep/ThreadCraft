@@ -12,6 +12,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.IOException
 
 class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
 
@@ -180,24 +186,57 @@ Jumlah bagian: $partCount
 
         val url = resolveChatCompletionUrl(rawBaseUrl)
         val apiKey = cleanApiKey(rawApiKey)
-        val authHeader = "Bearer $apiKey"
 
-        val testRequest = AiRequest(
-            model = model,
-            messages = listOf(AiMessage("user", "Hello, test connection. Reply with 'OK'.")),
-            max_tokens = 20,
-            temperature = 0.1
-        )
+        val jsonPayload = JSONObject().apply {
+            put("model", model)
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", "Hello! Reply with 'OK'.")
+                })
+            })
+            put("max_tokens", 20)
+            put("temperature", 0.1)
+        }.toString()
 
-        val response = aiService.generateCompletion(url, authHeader, testRequest)
-        val reply = response.choices?.firstOrNull()?.message?.content?.trim()
-        if (!reply.isNullOrBlank()) {
-            return@withContext reply
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val requestBody = jsonPayload.toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $apiKey")
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody)
+            .build()
+
+        val response = RetrofitClient.okHttpClient.newCall(request).execute()
+        val responseBody = response.body?.string() ?: ""
+
+        if (!response.isSuccessful) {
+            val errorMsg = try {
+                val errJson = JSONObject(responseBody)
+                errJson.optJSONObject("error")?.optString("message") ?: responseBody.take(150)
+            } catch (_: Exception) {
+                responseBody.take(150)
+            }
+            throw IOException("HTTP ${response.code}: $errorMsg")
         }
-        if (response.error?.message != null) {
-            throw IllegalStateException(response.error.message)
+
+        val json = try {
+            JSONObject(responseBody)
+        } catch (_: Exception) {
+            return@withContext "Koneksi terhubung (HTTP 200)"
         }
-        return@withContext "OK"
+
+        val choices = json.optJSONArray("choices")
+        val firstChoice = choices?.optJSONObject(0)
+        val message = firstChoice?.optJSONObject("message")
+        val content = message?.optString("content")?.trim()
+
+        if (!content.isNullOrBlank()) {
+            return@withContext content
+        }
+        return@withContext "OK (HTTP 200)"
     }
 
     suspend fun exchangeToken(code: String): Pair<String, String> = withContext(Dispatchers.IO) {

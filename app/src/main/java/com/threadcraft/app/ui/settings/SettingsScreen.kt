@@ -52,7 +52,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -78,13 +80,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         if (state.saveSuccess) {
             snackbarHostState.showSnackbar("Pengaturan tersimpan")
             viewModel.clearSaveSuccess()
-        }
-    }
-
-    LaunchedEffect(state.error) {
-        state.error?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearError()
         }
     }
 
@@ -122,6 +117,66 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
+            val crashPrefs = remember { context.getSharedPreferences("crash_dump", Context.MODE_PRIVATE) }
+            var lastCrash by remember { mutableStateOf(crashPrefs.getString("last_crash", null)) }
+
+            lastCrash?.let { crashText ->
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceVariant, RectangleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.error, RectangleShape)
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "Log Crash Terakhir:",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = crashText.take(400),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Crash Log", crashText)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "Log disalin!", Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RectangleShape,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("Salin Log", style = MaterialTheme.typography.labelSmall)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    crashPrefs.edit().remove("last_crash").apply()
+                                    lastCrash = null
+                                },
+                                shape = RectangleShape,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Outline),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("Hapus", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
             SectionHeader("Konfigurasi AI")
             Spacer(Modifier.height(8.dp))
 
@@ -161,12 +216,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 enabled = !state.isTestingAi
             ) {
                 if (state.isTestingAi) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = Accent,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(Modifier.width(8.dp))
                     Text("Menguji koneksi AI...", color = Accent)
                 } else {
                     Icon(
@@ -203,6 +252,23 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                }
+            }
+
+            state.error?.let { err ->
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceVariant, RectangleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.error, RectangleShape)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = err,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
 

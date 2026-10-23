@@ -15,7 +15,12 @@ class ThreadCraftApp : Application() {
 
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            Log.e("ThreadCraftApp", "Uncaught exception in thread ${thread.name}", throwable)
+            try {
+                val stack = android.util.Log.getStackTraceString(throwable)
+                android.util.Log.e("ThreadCraftApp", "FATAL CRASH: $stack")
+                val crashPrefs = getSharedPreferences("crash_dump", android.content.Context.MODE_PRIVATE)
+                crashPrefs.edit().putString("last_crash", stack).commit()
+            } catch (_: Throwable) {}
             defaultHandler?.uncaughtException(thread, throwable)
         }
 
