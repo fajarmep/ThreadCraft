@@ -281,31 +281,95 @@ Jumlah bagian: $partCount
             mimeType.contains("webp", ignoreCase = true) -> "webp"
             else -> "jpg"
         }
-
+        val filename = "tc_${System.currentTimeMillis()}.$extension"
         val mediaType = mimeType.toMediaTypeOrNull() ?: "image/jpeg".toMediaType()
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("reqtype", "fileupload")
-            .addFormDataPart(
-                "fileToUpload",
-                "media_${System.currentTimeMillis()}.$extension",
-                bytes.toRequestBody(mediaType)
-            )
+
+        val fastClient = RetrofitClient.okHttpClient.newBuilder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
             .build()
 
-        val request = Request.Builder()
-            .url("https://catbox.moe/user/api.php")
-            .post(requestBody)
-            .build()
+        val userAgent = "Mozilla/5.0 (Linux; Android 14; Mobile; ThreadCraft)"
 
-        val response = RetrofitClient.okHttpClient.newCall(request).execute()
-        val rawResponse = response.body?.string()?.trim() ?: ""
+        // 1. Primary: pomf.lain.la (not blocked by Indonesian ISPs, permanent hosting)
+        try {
+            val reqBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("files[]", filename, bytes.toRequestBody(mediaType))
+                .build()
 
-        if (!response.isSuccessful || !rawResponse.startsWith("http")) {
-            throw IOException("Gagal upload media ke server hosting: ${rawResponse.take(150)}")
+            val req = Request.Builder()
+                .url("https://pomf.lain.la/upload.php")
+                .header("User-Agent", userAgent)
+                .post(reqBody)
+                .build()
+
+            val resp = fastClient.newCall(req).execute()
+            if (resp.isSuccessful) {
+                val body = resp.body?.string() ?: ""
+                val json = JSONObject(body)
+                val files = json.optJSONArray("files")
+                val url = files?.optJSONObject(0)?.optString("url")
+                if (!url.isNullOrBlank()) {
+                    return@withContext url.replace("\\/", "/")
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("AppRepository", "pomf.lain.la upload failed: ${e.message}")
         }
 
-        rawResponse
+        // 2. Fallback 1: uguu.se (Fast global CDN)
+        try {
+            val reqBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("files[]", filename, bytes.toRequestBody(mediaType))
+                .build()
+
+            val req = Request.Builder()
+                .url("https://uguu.se/upload")
+                .header("User-Agent", userAgent)
+                .post(reqBody)
+                .build()
+
+            val resp = fastClient.newCall(req).execute()
+            if (resp.isSuccessful) {
+                val body = resp.body?.string() ?: ""
+                val json = JSONObject(body)
+                val files = json.optJSONArray("files")
+                val url = files?.optJSONObject(0)?.optString("url")
+                if (!url.isNullOrBlank()) {
+                    return@withContext url.replace("\\/", "/")
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("AppRepository", "uguu.se upload failed: ${e.message}")
+        }
+
+        // 3. Fallback 2: catbox.moe
+        try {
+            val reqBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("reqtype", "fileupload")
+                .addFormDataPart("fileToUpload", filename, bytes.toRequestBody(mediaType))
+                .build()
+
+            val req = Request.Builder()
+                .url("https://catbox.moe/user/api.php")
+                .header("User-Agent", userAgent)
+                .post(reqBody)
+                .build()
+
+            val resp = fastClient.newCall(req).execute()
+            val rawResponse = resp.body?.string()?.trim() ?: ""
+            if (resp.isSuccessful && rawResponse.startsWith("http")) {
+                return@withContext rawResponse
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("AppRepository", "catbox.moe upload failed: ${e.message}")
+        }
+
+        throw IOException("Gagal upload media ke server hosting. Semua server upload gagal diakses.")
     }
 
     private suspend fun waitForContainerReady(containerId: String, token: String) {
