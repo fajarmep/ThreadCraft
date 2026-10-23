@@ -60,6 +60,76 @@ class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
         return clean
     }
 
+    private fun extractContentFromAiResponse(rawBody: String): String {
+        val cleanBody = rawBody.trim().removePrefix("\uFEFF")
+
+        // 1. Standard full JSON
+        if (cleanBody.startsWith("{")) {
+            val json = JSONObject(cleanBody)
+            if (json.has("error")) {
+                val errObj = json.optJSONObject("error")
+                val msg = errObj?.optString("message") ?: json.optString("error")
+                throw IOException("AI Error: $msg")
+            }
+            val choices = json.optJSONArray("choices")
+            val firstChoice = choices?.optJSONObject(0)
+            val message = firstChoice?.optJSONObject("message")
+            val content = message?.optString("content")?.trim() ?: ""
+            if (content.isNotBlank()) {
+                return content
+            }
+            val delta = firstChoice?.optJSONObject("delta")
+            val deltaContent = delta?.optString("content")?.trim() ?: ""
+            if (deltaContent.isNotBlank()) {
+                return deltaContent
+            }
+        }
+
+        // 2. Server-Sent Events (SSE) streaming format (lines with data: {...})
+        val sseLines = cleanBody.lines()
+        val sseBuilder = StringBuilder()
+        var foundSse = false
+
+        for (line in sseLines) {
+            val trimmed = line.trim()
+            if (!trimmed.startsWith("data:")) continue
+            val dataStr = trimmed.removePrefix("data:").trim()
+            if (dataStr == "[DONE]") break
+            if (dataStr.isBlank() || !dataStr.startsWith("{")) continue
+
+            try {
+                val chunk = JSONObject(dataStr)
+                foundSse = true
+                if (chunk.has("error")) {
+                    val errObj = chunk.optJSONObject("error")
+                    val msg = errObj?.optString("message") ?: chunk.optString("error")
+                    throw IOException("AI Error: $msg")
+                }
+                val choices = chunk.optJSONArray("choices")
+                val firstChoice = choices?.optJSONObject(0)
+                val delta = firstChoice?.optJSONObject("delta")
+                val message = firstChoice?.optJSONObject("message")
+                val chunkText = delta?.optString("content")
+                    ?: message?.optString("content")
+                    ?: ""
+                sseBuilder.append(chunkText)
+            } catch (e: IOException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
+
+        if (foundSse && sseBuilder.isNotBlank()) {
+            return sseBuilder.toString().trim()
+        }
+
+        if (cleanBody.startsWith("{")) {
+            throw IOException("Model merespons JSON tanpa teks: ${cleanBody.take(200)}")
+        }
+
+        throw IOException("Server merespons bukan JSON: ${cleanBody.take(200)}")
+    }
+
     suspend fun generateContent(
         productTitle: String,
         description: String,
@@ -139,6 +209,7 @@ Jumlah bagian: $partCount
             })
             put("temperature", 0.7)
             put("max_tokens", 2500)
+            put("stream", false)
         }.toString()
 
         val mediaType = "application/json; charset=utf-8".toMediaType()
@@ -167,26 +238,7 @@ Jumlah bagian: $partCount
             throw IOException("HTTP ${response.code}: $errorMsg")
         }
 
-        val cleanBody = rawBody.trim().removePrefix("\uFEFF")
-        if (!cleanBody.startsWith("{")) {
-            throw IOException("Server merespons bukan JSON: ${cleanBody.take(200)}")
-        }
-
-        val json = JSONObject(cleanBody)
-        if (json.has("error")) {
-            val errObj = json.optJSONObject("error")
-            val msg = errObj?.optString("message") ?: json.optString("error")
-            throw IOException("AI Error: $msg")
-        }
-
-        val choices = json.optJSONArray("choices")
-        val firstChoice = choices?.optJSONObject(0)
-        val message = firstChoice?.optJSONObject("message")
-        val content = message?.optString("content")?.trim() ?: ""
-
-        if (content.isBlank()) {
-            throw IOException("Model tidak menghasilkan teks. Cuplikan respon: ${cleanBody.take(200)}")
-        }
+        val content = extractContentFromAiResponse(rawBody)
 
         val rawParts = content.split("===PART===")
             .map { it.trim() }
@@ -256,6 +308,7 @@ Jumlah bagian: $partCount
             })
             put("max_tokens", 20)
             put("temperature", 0.1)
+            put("stream", false)
         }.toString()
 
         val mediaType = "application/json; charset=utf-8".toMediaType()
@@ -274,25 +327,18 @@ Jumlah bagian: $partCount
         if (!response.isSuccessful) {
             val errorMsg = try {
                 val errJson = JSONObject(responseBody)
-                errJson.optJSONObject("error")?.optString("message") ?: responseBody.take(150)
+                val errObj = errJson.optJSONObject("error")
+                errObj?.optString("message")?.ifBlank { null }
+                    ?: errJson.optString("message").ifBlank { null }
+                    ?: responseBody.take(200)
             } catch (_: Exception) {
-                responseBody.take(150)
+                responseBody.take(200)
             }
             throw IOException("HTTP ${response.code}: $errorMsg")
         }
 
-        val json = try {
-            JSONObject(responseBody)
-        } catch (_: Exception) {
-            return@withContext "Koneksi terhubung (HTTP 200)"
-        }
-
-        val choices = json.optJSONArray("choices")
-        val firstChoice = choices?.optJSONObject(0)
-        val message = firstChoice?.optJSONObject("message")
-        val content = message?.optString("content")?.trim()
-
-        if (!content.isNullOrBlank()) {
+        val content = extractContentFromAiResponse(responseBody)
+        if (content.isNotBlank()) {
             return@withContext content
         }
         return@withContext "OK (HTTP 200)"
