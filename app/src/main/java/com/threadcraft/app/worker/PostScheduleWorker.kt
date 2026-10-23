@@ -41,25 +41,32 @@ class PostScheduleWorker(
         val repo = AppRepository(prefs, applicationContext)
         val now = System.currentTimeMillis()
 
-        val postsToProcess = mutableListOf<PostHistory>()
+        val candidatePosts = mutableListOf<PostHistory>()
         if (targetPostId > 0) {
             val p = repo.getPost(targetPostId)
             if (p != null && p.status == "SCHEDULED") {
-                postsToProcess.add(p)
+                candidatePosts.add(p)
             }
         }
 
         val duePosts = repo.getDueScheduled(now)
         for (dp in duePosts) {
-            if (postsToProcess.none { it.id == dp.id }) {
-                postsToProcess.add(dp)
+            if (candidatePosts.none { it.id == dp.id }) {
+                candidatePosts.add(dp)
             }
         }
 
-        Log.d("PostScheduleWorker", "Total scheduled posts to publish: ${postsToProcess.size}")
+        Log.d("PostScheduleWorker", "Total candidate posts to process: ${candidatePosts.size}")
 
         var hasFailure = false
-        for (post in postsToProcess) {
+        for (post in candidatePosts) {
+            // ATOMIC CLAIM: Only 1 worker can transition 'SCHEDULED' -> 'POSTING'
+            val claimed = repo.claimForPosting(post.id)
+            if (!claimed) {
+                Log.d("PostScheduleWorker", "Post id=${post.id} already claimed by another worker. Skipping to avoid duplicate.")
+                continue
+            }
+
             try {
                 val mediaUris = post.mediaPaths.mapNotNull { path ->
                     val file = File(path)
@@ -80,7 +87,7 @@ class PostScheduleWorker(
                         errorMessage = null
                     )
                 )
-                Log.d("PostScheduleWorker", "Post id=${post.id} published successfully.")
+                Log.d("PostScheduleWorker", "Post id=${post.id} successfully published to Threads.")
             } catch (e: Exception) {
                 Log.e("PostScheduleWorker", "Post id=${post.id} failed to publish", e)
                 hasFailure = true
@@ -103,7 +110,7 @@ class PostScheduleWorker(
             val now = System.currentTimeMillis()
             val delayMillis = (targetTimeMillis - now).coerceAtLeast(0)
 
-            Log.d("PostScheduleWorker", "Scheduling work for postId=$postId with delay=${delayMillis}ms")
+            Log.d("PostScheduleWorker", "Scheduling work for postId=$postId in ${delayMillis}ms")
 
             // 1. OneTimeWorkRequest with initial delay and network requirement
             val constraints = Constraints.Builder()
@@ -117,8 +124,9 @@ class PostScheduleWorker(
                 .addTag("scheduled_post_$postId")
                 .build()
 
+            // Shared unique work name prevents duplicate work tasks
             WorkManager.getInstance(context).enqueueUniqueWork(
-                "scheduled_post_$postId",
+                "post_task_$postId",
                 ExistingWorkPolicy.REPLACE,
                 workRequest
             )
@@ -168,10 +176,12 @@ class PostScheduleWorker(
                 workBuilder.setInputData(workDataOf("post_id" to postId))
             }
             val request = workBuilder.build()
-            val name = if (postId != null && postId > 0) "immediate_post_$postId" else "immediate_check_due"
+            val name = if (postId != null && postId > 0) "post_task_$postId" else "immediate_check_due"
+
+            // Use ExistingWorkPolicy.KEEP so if the task is already scheduled or running, no duplicate runs
             WorkManager.getInstance(context).enqueueUniqueWork(
                 name,
-                ExistingWorkPolicy.REPLACE,
+                ExistingWorkPolicy.KEEP,
                 request
             )
         }

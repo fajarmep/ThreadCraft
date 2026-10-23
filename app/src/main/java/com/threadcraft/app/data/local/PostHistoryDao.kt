@@ -24,6 +24,9 @@ interface PostHistoryDao {
     @Query("SELECT * FROM post_history WHERE status = 'SCHEDULED' AND scheduledAt <= :now")
     suspend fun getDueScheduled(now: Long): List<PostHistory>
 
+    @Query("UPDATE post_history SET status = 'POSTING' WHERE id = :id AND status = 'SCHEDULED'")
+    suspend fun claimForPosting(id: Long): Int
+
     @Query("DELETE FROM post_history WHERE id = :id")
     suspend fun deleteById(id: Long)
 }

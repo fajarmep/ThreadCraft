@@ -129,12 +129,14 @@ private fun HistoryItem(
         "POSTED" -> SuccessGreen
         "FAILED" -> ErrorRed
         "SCHEDULED" -> WarningYellow
+        "POSTING" -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val statusIcon = when (post.status) {
         "POSTED" -> Icons.Default.CheckCircle
         "FAILED" -> Icons.Default.Error
         "SCHEDULED" -> Icons.Default.Schedule
+        "POSTING" -> Icons.Default.Sync
         else -> Icons.Default.History
     }
     val dateFormat = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())

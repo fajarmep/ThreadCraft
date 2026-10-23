@@ -42,6 +42,8 @@ class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
 
     suspend fun getDueScheduled(now: Long) = dao.getDueScheduled(now)
 
+    suspend fun claimForPosting(id: Long): Boolean = dao.claimForPosting(id) > 0
+
     private fun resolveChatCompletionUrl(rawUrl: String): String {
         var clean = rawUrl.trim()
         if (clean.isBlank()) throw IllegalArgumentException("AI Base URL belum diisi")
