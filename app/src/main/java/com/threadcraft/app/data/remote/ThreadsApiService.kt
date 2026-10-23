@@ -1,0 +1,49 @@
+package com.threadcraft.app.data.remote
+
+import com.threadcraft.app.data.model.ThreadsCreateResponse
+import com.threadcraft.app.data.model.ThreadsPublishResponse
+import com.threadcraft.app.data.model.ThreadsTokenResponse
+import com.threadcraft.app.data.model.ThreadsUserResponse
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
+
+interface ThreadsApiService {
+
+    @FormUrlEncoded
+    @POST("oauth/access_token")
+    suspend fun getAccessToken(
+        @Field("client_id") clientId: String,
+        @Field("client_secret") clientSecret: String,
+        @Field("grant_type") grantType: String = "authorization_code",
+        @Field("redirect_uri") redirectUri: String,
+        @Field("code") code: String
+    ): ThreadsTokenResponse
+
+    @GET("v1.0/me")
+    suspend fun getProfile(
+        @Query("fields") fields: String = "id,username,name",
+        @Query("access_token") accessToken: String
+    ): ThreadsUserResponse
+
+    @POST("v1.0/{user_id}/threads")
+    @FormUrlEncoded
+    suspend fun createThread(
+        @Path("user_id") userId: String,
+        @Field("media_type") mediaType: String = "TEXT",
+        @Field("text") text: String,
+        @Field("access_token") accessToken: String,
+        @Field("reply_to_id") replyToId: String? = null
+    ): ThreadsCreateResponse
+
+    @POST("v1.0/{user_id}/threads_publish")
+    @FormUrlEncoded
+    suspend fun publishThread(
+        @Path("user_id") userId: String,
+        @Field("creation_id") creationId: String,
+        @Field("access_token") accessToken: String
+    ): ThreadsPublishResponse
+}
