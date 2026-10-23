@@ -135,8 +135,7 @@ private fun HistoryItem(
     val statusIcon = when (post.status) {
         "POSTED" -> Icons.Default.CheckCircle
         "FAILED" -> Icons.Default.Error
-        "SCHEDULED" -> Icons.Default.Schedule
-        "POSTING" -> Icons.Default.Sync
+        "SCHEDULED", "POSTING" -> Icons.Default.Schedule
         else -> Icons.Default.History
     }
     val dateFormat = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
