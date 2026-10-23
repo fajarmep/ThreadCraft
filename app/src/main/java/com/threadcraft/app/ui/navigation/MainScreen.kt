@@ -36,9 +36,9 @@ fun MainScreen(prefs: SecurePrefs) {
     val factory = remember { AppViewModelFactory(prefs) }
 
     val startDestination = if (prefs.isSetupComplete && prefs.isThreadsConnected) {
-        Screen.CreatePost.route
+        Routes.CREATE_POST
     } else {
-        Screen.Settings.route
+        Routes.SETTINGS
     }
 
     Scaffold(
@@ -52,15 +52,15 @@ fun MainScreen(prefs: SecurePrefs) {
             startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.CreatePost.route) {
+            composable(Routes.CREATE_POST) {
                 val createPostViewModel: CreatePostViewModel = viewModel(factory = factory)
                 CreatePostScreen(viewModel = createPostViewModel)
             }
-            composable(Screen.History.route) {
+            composable(Routes.HISTORY) {
                 val historyViewModel: HistoryViewModel = viewModel(factory = factory)
                 HistoryScreen(viewModel = historyViewModel)
             }
-            composable(Screen.Settings.route) {
+            composable(Routes.SETTINGS) {
                 val settingsViewModel: SettingsViewModel = viewModel(factory = factory)
                 SettingsScreen(viewModel = settingsViewModel)
             }

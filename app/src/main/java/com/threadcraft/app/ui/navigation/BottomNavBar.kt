@@ -33,13 +33,13 @@ fun BottomNavBar(navController: NavController) {
         containerColor = SurfaceContainer,
         tonalElevation = 0.dp
     ) {
-        bottomNavItems.forEach { screen ->
-            val selected = currentRoute == screen.route
+        bottomNavItems.forEach { item ->
+            val selected = currentRoute == item.route
             NavigationBarItem(
                 selected = selected,
                 onClick = {
-                    if (currentRoute != screen.route) {
-                        navController.navigate(screen.route) {
+                    if (currentRoute != item.route) {
+                        navController.navigate(item.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }
@@ -49,16 +49,14 @@ fun BottomNavBar(navController: NavController) {
                     }
                 },
                 icon = {
-                    screen.icon?.let {
-                        Icon(
-                            imageVector = it,
-                            contentDescription = screen.title
-                        )
-                    }
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.title
+                    )
                 },
                 label = {
                     Text(
-                        text = screen.title,
+                        text = item.title,
                         style = MaterialTheme.typography.labelSmall
                     )
                 },
