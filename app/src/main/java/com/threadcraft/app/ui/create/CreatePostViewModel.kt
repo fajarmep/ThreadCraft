@@ -145,7 +145,9 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     val msg = t.localizedMessage ?: t.message ?: "Terjadi kesalahan"
                     appendLine("Pesan: $msg")
                     appendLine("Tipe: ${t.javaClass.simpleName}")
-                    if (msg.contains("190", ignoreCase = true) || msg.contains("token", ignoreCase = true) || msg.contains("session", ignoreCase = true)) {
+                    if (msg.contains("threads_manage_replies", ignoreCase = true) || (msg.contains("code 10") && msg.contains("permission", ignoreCase = true))) {
+                        appendLine("\nSaran: Utas bersambung (reply chain) membutuhkan izin 'threads_manage_replies'. Silakan Logout lalu Login Ulang Threads di tab Pengaturan, dan pastikan fitur 'threads_manage_replies' aktif di Meta Developer Dashboard.")
+                    } else if (msg.contains("190", ignoreCase = true) || msg.contains("token", ignoreCase = true) || msg.contains("session", ignoreCase = true)) {
                         appendLine("\nSaran: Sesi atau Token login Threads kemungkinan kadaluarsa/tidak valid. Silakan Logout lalu Login Ulang di menu Pengaturan.")
                     }
                     val cause = t.cause

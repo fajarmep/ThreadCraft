@@ -126,7 +126,7 @@ class SettingsViewModel(private val prefs: SecurePrefs) : ViewModel() {
         val url = Uri.parse("https://threads.net/oauth/authorize").buildUpon()
             .appendQueryParameter("client_id", s.threadsAppId.trim())
             .appendQueryParameter("redirect_uri", targetRedirect)
-            .appendQueryParameter("scope", "threads_basic,threads_content_publish")
+            .appendQueryParameter("scope", "threads_basic,threads_content_publish,threads_manage_replies")
             .appendQueryParameter("response_type", "code")
             .build()
             .toString()
