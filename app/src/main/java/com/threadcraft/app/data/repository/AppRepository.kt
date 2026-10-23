@@ -119,8 +119,10 @@ class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
             }
         }
 
-        if (foundSse && sseBuilder.isNotBlank()) {
-            return sseBuilder.toString().trim()
+        if (foundSse) {
+            val text = sseBuilder.toString().trim()
+            if (text.isNotBlank()) return text
+            throw IOException("Model AI merespons chunk streaming kosong")
         }
 
         if (cleanBody.startsWith("{")) {
@@ -209,7 +211,6 @@ Jumlah bagian: $partCount
             })
             put("temperature", 0.7)
             put("max_tokens", 2500)
-            put("stream", false)
         }.toString()
 
         val mediaType = "application/json; charset=utf-8".toMediaType()
@@ -308,7 +309,6 @@ Jumlah bagian: $partCount
             })
             put("max_tokens", 20)
             put("temperature", 0.1)
-            put("stream", false)
         }.toString()
 
         val mediaType = "application/json; charset=utf-8".toMediaType()

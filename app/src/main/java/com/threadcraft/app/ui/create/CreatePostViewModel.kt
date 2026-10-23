@@ -93,6 +93,9 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
             } catch (t: Throwable) {
                 android.util.Log.e("CreatePostViewModel", "Generate content error", t)
                 val detailLog = buildString {
+                    if (t is java.net.SocketTimeoutException) {
+                        appendLine("Keterangan: Timeout (>180s). Server AI membutuhkan waktu terlalu lama untuk menyelesaikan respons.")
+                    }
                     appendLine("Pesan: ${t.localizedMessage ?: t.message ?: "Terjadi kesalahan"}")
                     appendLine("Tipe: ${t.javaClass.simpleName}")
                     val cause = t.cause
