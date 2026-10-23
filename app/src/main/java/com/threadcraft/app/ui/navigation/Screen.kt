@@ -11,8 +11,7 @@ sealed class Screen(val route: String, val title: String = "", val icon: ImageVe
     object CreatePost : Screen("create_post", "Buat Post", Icons.Default.Create)
     object History : Screen("history", "Riwayat", Icons.Default.History)
     object Settings : Screen("settings", "Pengaturan", Icons.Default.Settings)
-
-    companion object {
-        val bottomNavItems = listOf(CreatePost, History, Settings)
-    }
 }
+
+val bottomNavItems: List<Screen>
+    get() = listOf(Screen.CreatePost, Screen.History, Screen.Settings)

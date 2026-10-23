@@ -33,7 +33,7 @@ fun BottomNavBar(navController: NavController) {
         containerColor = SurfaceContainer,
         tonalElevation = 0.dp
     ) {
-        Screen.bottomNavItems.forEach { screen ->
+        bottomNavItems.forEach { screen ->
             val selected = currentRoute == screen.route
             NavigationBarItem(
                 selected = selected,
