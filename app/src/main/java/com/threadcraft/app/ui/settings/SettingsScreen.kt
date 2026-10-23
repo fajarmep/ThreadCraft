@@ -67,6 +67,7 @@ import com.threadcraft.app.ui.theme.Accent
 import com.threadcraft.app.ui.theme.Outline
 import com.threadcraft.app.ui.theme.SuccessGreen
 import com.threadcraft.app.ui.theme.SurfaceVariant
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +80,20 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         if (state.saveSuccess) {
             snackbarHostState.showSnackbar("Pengaturan tersimpan")
             viewModel.clearSaveSuccess()
+        }
+    }
+
+    LaunchedEffect(state.aiTestMessage) {
+        if (state.aiTestMessage != null) {
+            delay(4000)
+            viewModel.clearAiTestMessage()
+        }
+    }
+
+    LaunchedEffect(state.error) {
+        if (state.error != null) {
+            delay(6000)
+            viewModel.clearError()
         }
     }
 

@@ -90,10 +90,24 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     numParts = numParts
                 )
                 _state.value = _state.value.copy(isGenerating = false, generatedParts = parts)
-            } catch (e: Exception) {
+            } catch (t: Throwable) {
+                android.util.Log.e("CreatePostViewModel", "Generate content error", t)
+                val detailLog = buildString {
+                    appendLine("Pesan: ${t.localizedMessage ?: t.message ?: "Terjadi kesalahan"}")
+                    appendLine("Tipe: ${t.javaClass.simpleName}")
+                    val cause = t.cause
+                    if (cause != null) {
+                        appendLine("Penyebab: ${cause.localizedMessage ?: cause.message}")
+                    }
+                    val stack = android.util.Log.getStackTraceString(t)
+                    if (stack.isNotBlank()) {
+                        appendLine("\n--- Detail Log ---")
+                        appendLine(stack.take(1200))
+                    }
+                }
                 _state.value = _state.value.copy(
                     isGenerating = false,
-                    error = "Gagal generate: ${e.message}"
+                    error = detailLog
                 )
             }
         }

@@ -157,27 +157,35 @@ Jumlah bagian: $partCount
         if (!response.isSuccessful) {
             val errorMsg = try {
                 val errJson = JSONObject(rawBody)
-                errJson.optJSONObject("error")?.optString("message") ?: rawBody.take(150)
+                val errObj = errJson.optJSONObject("error")
+                errObj?.optString("message")?.ifBlank { null }
+                    ?: errJson.optString("message").ifBlank { null }
+                    ?: rawBody.take(400)
             } catch (_: Exception) {
-                rawBody.take(150)
+                rawBody.take(400)
             }
             throw IOException("HTTP ${response.code}: $errorMsg")
         }
 
         val cleanBody = rawBody.trim().removePrefix("\uFEFF")
         if (!cleanBody.startsWith("{")) {
-            throw IOException("Server merespons bukan JSON: ${cleanBody.take(100)}")
+            throw IOException("Server merespons bukan JSON: ${cleanBody.take(200)}")
         }
 
         val json = JSONObject(cleanBody)
+        if (json.has("error")) {
+            val errObj = json.optJSONObject("error")
+            val msg = errObj?.optString("message") ?: json.optString("error")
+            throw IOException("AI Error: $msg")
+        }
+
         val choices = json.optJSONArray("choices")
         val firstChoice = choices?.optJSONObject(0)
         val message = firstChoice?.optJSONObject("message")
         val content = message?.optString("content")?.trim() ?: ""
 
         if (content.isBlank()) {
-            val err = json.optJSONObject("error")?.optString("message")
-            throw IOException(if (!err.isNullOrBlank()) err else "Model tidak menghasilkan teks")
+            throw IOException("Model tidak menghasilkan teks. Cuplikan respon: ${cleanBody.take(200)}")
         }
 
         val rawParts = content.split("===PART===")
