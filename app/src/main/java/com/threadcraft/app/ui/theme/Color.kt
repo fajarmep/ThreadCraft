@@ -2,22 +2,24 @@ package com.threadcraft.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Accent = Color(0xFFED3969)
-val AccentDark = Color(0xFFB82D52)
-val AccentLight = Color(0xFFFF6B8A)
+// Authentic Threads Monochrome Light Palette - Strictly Zero Pink / Red
+val Accent = Color(0xFF000000)
+val AccentDark = Color(0xFF1F1F1F)
+val AccentLight = Color(0xFF333333)
 
-val Surface = Color(0xFF0D0D0D)
-val SurfaceVariant = Color(0xFF1A1A1A)
-val SurfaceContainer = Color(0xFF242424)
-val SurfaceBright = Color(0xFF2E2E2E)
+val Surface = Color(0xFFFFFFFF)
+val SurfaceVariant = Color(0xFFF7F7F7)
+val SurfaceContainer = Color(0xFFEFEFEF)
+val SurfaceBright = Color(0xFFFFFFFF)
 
-val OnSurface = Color(0xFFE8E8E8)
-val OnSurfaceVariant = Color(0xFF999999)
+val OnSurface = Color(0xFF101010)
+val OnSurfaceVariant = Color(0xFF666666)
 val OnAccent = Color(0xFFFFFFFF)
 
-val Outline = Color(0xFF333333)
-val OutlineVariant = Color(0xFF2A2A2A)
+val Outline = Color(0xFFE0E0E0)
+val OutlineVariant = Color(0xFFCCCCCC)
 
-val ErrorRed = Color(0xFFCF6679)
-val SuccessGreen = Color(0xFF4CAF50)
-val WarningYellow = Color(0xFFFFC107)
+// Neutral status colors (Zero Pink / Red)
+val ErrorRed = Color(0xFF374151) // Neutral deep slate/charcoal for errors
+val SuccessGreen = Color(0xFF15803D)
+val WarningYellow = Color(0xFFB45309)

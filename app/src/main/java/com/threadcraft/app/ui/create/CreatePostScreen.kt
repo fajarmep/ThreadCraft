@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.threadcraft.app.ui.theme.Accent
+import com.threadcraft.app.ui.theme.OnAccent
 import com.threadcraft.app.ui.theme.Outline
 import com.threadcraft.app.ui.theme.SurfaceContainer
 import com.threadcraft.app.ui.theme.SurfaceVariant
@@ -250,7 +251,7 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                 onClick = { viewModel.generate() },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RectangleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = OnAccent),
                 elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp, 0.dp),
                 enabled = !state.isGenerating
             ) {
@@ -397,7 +398,7 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                         onClick = { viewModel.postNow() },
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RectangleShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                        colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = OnAccent),
                         elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp, 0.dp),
                         enabled = !state.isPosting
                     ) {

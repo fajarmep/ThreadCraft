@@ -64,6 +64,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.threadcraft.app.ui.theme.Accent
+import com.threadcraft.app.ui.theme.OnAccent
 import com.threadcraft.app.ui.theme.Outline
 import com.threadcraft.app.ui.theme.SuccessGreen
 import com.threadcraft.app.ui.theme.SurfaceVariant
@@ -425,7 +426,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 onClick = { viewModel.save() },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RectangleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = OnAccent),
                 elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp, 0.dp)
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)

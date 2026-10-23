@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
@@ -20,15 +20,15 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
-private val DarkColorScheme = darkColorScheme(
+private val LightColorScheme = lightColorScheme(
     primary = Accent,
     onPrimary = OnAccent,
-    primaryContainer = AccentDark,
-    onPrimaryContainer = OnAccent,
-    secondary = Accent,
+    primaryContainer = SurfaceContainer,
+    onPrimaryContainer = OnSurface,
+    secondary = AccentDark,
     onSecondary = OnAccent,
-    secondaryContainer = AccentDark,
-    onSecondaryContainer = OnAccent,
+    secondaryContainer = SurfaceVariant,
+    onSecondaryContainer = OnSurface,
     tertiary = AccentLight,
     onTertiary = OnAccent,
     background = Surface,
@@ -53,13 +53,15 @@ fun ThreadCraftTheme(content: @Composable () -> Unit) {
             view.context.findActivity()?.window?.let { window ->
                 window.statusBarColor = Surface.toArgb()
                 window.navigationBarColor = Surface.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = true
+                controller.isAppearanceLightNavigationBars = true
             }
         }
     }
 
     MaterialTheme(
-        colorScheme = DarkColorScheme,
+        colorScheme = LightColorScheme,
         typography = Typography,
         shapes = FlatShapes,
         content = content

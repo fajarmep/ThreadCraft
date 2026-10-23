@@ -59,6 +59,7 @@ fun SplashScreen(onFinished: () -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "ThreadsCraft Logo",
+                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Accent),
                 modifier = Modifier.size(96.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
