@@ -26,8 +26,9 @@ class ThreadCraftApp : Application() {
 
         try {
             com.threadcraft.app.worker.PostScheduleWorker.enqueuePeriodicWork(this)
+            com.threadcraft.app.worker.PostScheduleWorker.enqueueImmediateWork(this)
         } catch (t: Throwable) {
-            Log.e("ThreadCraftApp", "Failed to enqueue periodic worker", t)
+            Log.e("ThreadCraftApp", "Failed to enqueue worker", t)
         }
     }
 

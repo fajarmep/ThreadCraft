@@ -2,9 +2,11 @@ package com.threadcraft.app.ui.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.threadcraft.app.ThreadCraftApp
 import com.threadcraft.app.data.local.SecurePrefs
 import com.threadcraft.app.data.model.PostHistory
 import com.threadcraft.app.data.repository.AppRepository
+import com.threadcraft.app.worker.PostScheduleWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +24,9 @@ class HistoryViewModel(prefs: SecurePrefs) : ViewModel() {
     val state: StateFlow<HistoryState> = _state.asStateFlow()
 
     init {
+        try {
+            PostScheduleWorker.enqueueImmediateWork(ThreadCraftApp.instance)
+        } catch (_: Throwable) {}
         viewModelScope.launch {
             repo.getAllPosts().collect { posts ->
                 _state.value = _state.value.copy(posts = posts)

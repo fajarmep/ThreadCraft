@@ -19,7 +19,8 @@ data class PostHistory(
     val threadIds: List<String> = emptyList(),
     val scheduledAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val mediaPaths: List<String> = emptyList()
 )
 
 class Converters {

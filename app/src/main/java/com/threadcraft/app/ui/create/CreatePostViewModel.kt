@@ -3,13 +3,18 @@ package com.threadcraft.app.ui.create
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.threadcraft.app.ThreadCraftApp
 import com.threadcraft.app.data.local.SecurePrefs
 import com.threadcraft.app.data.model.PostHistory
 import com.threadcraft.app.data.repository.AppRepository
+import com.threadcraft.app.worker.PostScheduleWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 data class CreatePostState(
     val productTitle: String = "",
@@ -182,24 +187,50 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
         val s = _state.value
         if (s.generatedParts.isEmpty()) return
 
-        viewModelScope.launch {
+        val appContext = ThreadCraftApp.instance
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                repo.savePost(
+                // 1. Copy any attached media Uris to app private internal storage
+                val savedMediaPaths = mutableListOf<String>()
+                s.mediaUris.forEachIndexed { index, uri ->
+                    try {
+                        val input = appContext.contentResolver.openInputStream(uri)
+                        if (input != null) {
+                            val destFile = File(appContext.filesDir, "sched_${System.currentTimeMillis()}_$index.jpg")
+                            destFile.outputStream().use { out -> input.copyTo(out) }
+                            savedMediaPaths.add(destFile.absolutePath)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("CreatePostViewModel", "Gagal menyalin media lokal: ${e.message}")
+                    }
+                }
+
+                // 2. Save post to database
+                val postId = repo.savePost(
                     PostHistory(
                         productTitle = s.productTitle,
                         affiliateLink = s.affiliateLink,
                         storyStyle = s.storyStyle,
                         parts = s.generatedParts,
                         status = "SCHEDULED",
-                        scheduledAt = timeMillis
+                        scheduledAt = timeMillis,
+                        mediaPaths = savedMediaPaths
                     )
                 )
-                _state.value = s.copy(
-                    showScheduler = false,
-                    scheduleSuccess = true
-                )
+
+                // 3. Register WorkManager & AlarmManager to wake up and post
+                PostScheduleWorker.schedulePostWork(appContext, postId, timeMillis)
+
+                withContext(Dispatchers.Main) {
+                    _state.value = s.copy(
+                        showScheduler = false,
+                        scheduleSuccess = true
+                    )
+                }
             } catch (e: Exception) {
-                _state.value = s.copy(error = "Gagal jadwalkan: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    _state.value = s.copy(error = "Gagal jadwalkan: ${e.message}")
+                }
             }
         }
     }
