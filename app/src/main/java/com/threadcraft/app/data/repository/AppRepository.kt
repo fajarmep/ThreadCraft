@@ -146,32 +146,60 @@ class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
         style: String,
         numParts: Int?
     ): List<String> = withContext(Dispatchers.IO) {
-        val styleInstruction = when (style) {
-            "Cerpen Storytelling" -> """
-                Tulis cerita pendek yang menarik dan emosional tentang seseorang yang mengalami masalah,
-                lalu menemukan solusi melalui produk ini. Gunakan narasi orang pertama, buat pembaca
-                merasa relate. Akhiri dengan ajakan halus untuk mencoba produk.
-            """.trimIndent()
-            "Review Pengalaman" -> """
-                Tulis review pengalaman pribadi yang jujur dan detail. Mulai dari masalah yang dihadapi,
-                proses menemukan produk, pengalaman menggunakan, pro dan kontra, lalu kesimpulan
-                dan rekomendasi. Gunakan bahasa santai seperti ngobrol dengan teman.
-            """.trimIndent()
-            "Thread Tips" -> """
-                Buat thread berisi tips dan trik yang berhubungan dengan kategori produk ini.
-                Setiap bagian berisi 1 tips actionable. Sisipkan produk sebagai salah satu
-                rekomendasi secara natural di bagian tengah atau akhir thread.
-            """.trimIndent()
-            "Perbandingan Produk" -> """
-                Buat thread perbandingan yang fair antara beberapa opsi (bisa fiktif),
-                posisikan produk ini sebagai pilihan terbaik berdasarkan value. Gunakan format
-                yang mudah dibaca dengan poin-poin perbandingan yang jelas.
-            """.trimIndent()
-            else -> "Tulis konten promosi kreatif untuk produk ini."
+        val hasAffiliate = affiliateLink.isNotBlank()
+
+        val styleInstruction = if (hasAffiliate) {
+            when (style) {
+                "Cerpen Storytelling" -> """
+                    Tulis cerita pendek yang menarik dan emosional tentang seseorang yang mengalami masalah,
+                    lalu menemukan solusi melalui produk ini. Gunakan narasi orang pertama, buat pembaca
+                    merasa relate. Akhiri dengan ajakan halus untuk mencoba produk.
+                """.trimIndent()
+                "Review Pengalaman" -> """
+                    Tulis review pengalaman pribadi yang jujur dan detail. Mulai dari masalah yang dihadapi,
+                    proses menemukan produk, pengalaman menggunakan, pro dan kontra, lalu kesimpulan
+                    dan rekomendasi. Gunakan bahasa santai seperti ngobrol dengan teman.
+                """.trimIndent()
+                "Thread Tips" -> """
+                    Buat thread berisi tips dan trik yang berhubungan dengan kategori produk ini.
+                    Setiap bagian berisi 1 tips actionable. Sisipkan produk sebagai salah satu
+                    rekomendasi secara natural di bagian tengah atau akhir thread.
+                """.trimIndent()
+                "Perbandingan Produk" -> """
+                    Buat thread perbandingan yang fair antara beberapa opsi (bisa fiktif),
+                    posisikan produk ini sebagai pilihan terbaik berdasarkan value. Gunakan format
+                    yang mudah dibaca dengan poin-poin perbandingan yang jelas.
+                """.trimIndent()
+                else -> "Tulis konten promosi kreatif untuk produk ini."
+            }
+        } else {
+            when (style) {
+                "Cerpen Storytelling" -> """
+                    Tulis cerita pendek yang mendalam, emosional, dan inspiratif seputar topik ini.
+                    Gunakan narasi hidup (bisa sudut pandang orang pertama atau ketiga) sehingga
+                    pembaca terbawa alur dan merasa terhubung. Bagian akhir berisi hikmah, perenungan hangat,
+                    atau pertanyaan santai yang memicu pembaca berbagi cerita di kolom komentar.
+                """.trimIndent()
+                "Review Pengalaman" -> """
+                    Tulis refleksi cerita atau studi kasus pengalaman nyata yang jujur dan kaya wawasan seputar topik ini.
+                    Mulai dari latar belakang situasi, proses yang dilalui, pelajaran penting yang dipetik,
+                    hingga perspektif berharga untuk pembaca. Gunakan gaya bertutur santai seperti berbagi kepada sahabat.
+                """.trimIndent()
+                "Thread Tips" -> """
+                    Buat thread edukatif dan praktis berisi tips, wawasan, atau langkah-langkah bermanfaat seputar topik ini.
+                    Setiap bagian menyajikan poin penting yang actionable dan berbobot tanpa ada unsur jualan sama sekali.
+                """.trimIndent()
+                "Perbandingan Produk" -> """
+                    Buat thread eksplorasi dan analisis komparatif yang objektif mengenai topik ini dari berbagai sudut pandang.
+                    Bantu pembaca melihat gambaran utuh, kelebihan, kekurangan, dan pertimbangan logis tanpa memihak secara komersial.
+                """.trimIndent()
+                else -> "Tulis thread artikel yang mengalir, edukatif, dan memberikan nilai nyata bagi pembaca."
+            }
         }
 
         val partCount = numParts ?: 5
-        val systemPrompt = """
+        val systemPrompt = if (hasAffiliate) {
+            """
 Kamu adalah copywriter profesional untuk media sosial Threads (mirip Twitter).
 Tugasmu membuat konten thread yang menarik untuk affiliate marketing.
 
@@ -192,14 +220,47 @@ Tulis setiap bagian murni hanya isi postingan tanpa label nomor apapun, dipisahk
 
 GAYA PENULISAN:
 $styleInstruction
-        """.trimIndent()
+            """.trimIndent()
+        } else {
+            """
+Kamu adalah penulis dan pencerita ulung untuk media sosial Threads (mirip Twitter).
+Tugasmu membuat thread artikel/cerita murni yang mendalam, edukatif, dan menarik pembaca TANPA ada unsur jualan atau affiliate.
 
-        val userPrompt = """
+ATURAN KETAT:
+1. Buat TEPAT $partCount bagian thread
+2. Setiap bagian MAKSIMAL 480 karakter
+3. JANGAN tambahkan penomoran seperti 1/5, 2/5, Part 1, atau Bagian 1 di awal teks bagian manapun
+4. Bagian pertama harus hook yang kuat dan bikin orang penasaran untuk membaca lanjutannya
+5. Bagian terakhir adalah kesimpulan yang bermakna, refleksi mendalam, pesan moral, atau pertanyaan terbuka yang mengajak audiens berdiskusi santai di kolom komentar. DILARANG membuat ajakan membeli barang, mengklik link, atau cek bio.
+6. Gunakan bahasa Indonesia yang luwes, natural, dan menyentuh emosi atau logika pembaca
+7. JANGAN gunakan hashtag (#) sama sekali. Dilarang menulis hashtag di seluruh bagian thread
+8. DILARANG MENYISIPKAN LINK APAPUN. DILARANG menyuruh klik link, membeli, atau promosi. Ini murni artikel/konten bernilai tinggi (value-first content).
+9. Setiap bagian harus bisa berdiri sendiri tapi tetap menyambung runtut dari awal sampai akhir
+10. Gunakan emoji secukupnya untuk penekanan rasa, jangan berlebihan
+
+FORMAT OUTPUT:
+Tulis setiap bagian murni hanya isi postingan tanpa label nomor apapun, dipisahkan dengan tanda ===PART===
+
+GAYA PENULISAN:
+$styleInstruction
+            """.trimIndent()
+        }
+
+        val userPrompt = if (hasAffiliate) {
+            """
 Produk: $productTitle
 Deskripsi: $description
 Link Affiliate: $affiliateLink
 Jumlah bagian: $partCount
-        """.trimIndent()
+            """.trimIndent()
+        } else {
+            """
+Topik / Judul: $productTitle
+Poin Bahasan / Ringkasan: $description
+Jumlah bagian: $partCount
+Mode: Artikel Murni (Non-komersial / Tanpa Link)
+            """.trimIndent()
+        }
 
         val url = resolveChatCompletionUrl(prefs.aiBaseUrl)
         val apiKey = cleanApiKey(prefs.aiApiKey)

@@ -126,8 +126,8 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
             FlatField(
                 value = state.productTitle,
                 onValueChange = { viewModel.updateProductTitle(it) },
-                label = "Judul Produk",
-                placeholder = "Nama produk yang dipromosikan"
+                label = "Judul / Topik",
+                placeholder = "Nama produk atau topik bahasan"
             )
             Spacer(Modifier.height(12.dp))
 
@@ -135,8 +135,8 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
             OutlinedTextField(
                 value = state.description,
                 onValueChange = { viewModel.updateDescription(it) },
-                label = { Text("Deskripsi Singkat") },
-                placeholder = { Text("Jelaskan produk secara singkat...") },
+                label = { Text("Deskripsi Singkat / Poin Cerita") },
+                placeholder = { Text("Jelaskan produk atau poin bahasan...") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RectangleShape,
                 minLines = 3,
@@ -154,8 +154,8 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
             FlatField(
                 value = state.affiliateLink,
                 onValueChange = { viewModel.updateAffiliateLink(it) },
-                label = "Link Affiliate",
-                placeholder = "https://..."
+                label = "Link Affiliate (Opsional)",
+                placeholder = "Kosongkan jika ingin artikel murni"
             )
             Spacer(Modifier.height(16.dp))
 

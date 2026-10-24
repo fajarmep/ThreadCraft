@@ -76,7 +76,7 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
     fun generate() {
         val s = _state.value
         if (s.productTitle.isBlank()) {
-            _state.value = s.copy(error = "Judul produk harus diisi")
+            _state.value = s.copy(error = "Judul atau topik harus diisi")
             return
         }
         _state.value = s.copy(isGenerating = true, error = null, generatedParts = emptyList())
