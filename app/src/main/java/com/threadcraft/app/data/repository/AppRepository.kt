@@ -180,10 +180,10 @@ ATURAN KETAT:
 2. Setiap bagian MAKSIMAL 480 karakter
 3. JANGAN tambahkan penomoran seperti 1/5, 2/5, Part 1, atau Bagian 1 di awal teks bagian manapun
 4. Bagian pertama harus hook yang bikin orang berhenti scroll
-5. Bagian terakhir harus CTA dengan link affiliate
+5. Bagian terakhir harus CTA dengan link affiliate yang diikuti kalimat penutup setelahnya
 6. Gunakan bahasa Indonesia yang natural dan engaging
 7. JANGAN gunakan hashtag (#) sama sekali. Dilarang menulis hashtag di seluruh bagian thread
-8. Sisipkan link affiliate ($affiliateLink) HANYA di bagian terakhir
+8. Sisipkan link affiliate ($affiliateLink) di bagian terakhir, tapi DILARANG meletakkan link di ujung paling akhir naskah. Posisikan link di tengah naskah dan WAJIB sertakan 1-2 kalimat penutup setelah link (contohnya: pengingat klaim voucher/promo, tips singkat, atau ajakan diskusi santai).
 9. Setiap bagian harus bisa berdiri sendiri tapi tetap nyambung
 10. Gunakan emoji secukupnya untuk emphasis, jangan berlebihan
 
@@ -262,7 +262,21 @@ Jumlah bagian: $partCount
         }
 
         val cleaned = parts.map { cleanPartText(it) }.filter { it.isNotBlank() }
-        if (cleaned.isNotEmpty()) cleaned else parts
+        val finalParts = if (cleaned.isNotEmpty()) cleaned.toMutableList() else parts.toMutableList()
+
+        if (affiliateLink.isNotBlank() && finalParts.isNotEmpty()) {
+            val lastIdx = finalParts.size - 1
+            var lastPart = finalParts[lastIdx]
+            val trimmedLink = affiliateLink.trim()
+            if (!lastPart.contains(trimmedLink)) {
+                lastPart = "$lastPart\n\nCek produknya di sini ya: $trimmedLink\nYuk jangan sampai kehabisan promonya!"
+            } else if (lastPart.trimEnd().endsWith(trimmedLink)) {
+                lastPart = "${lastPart.trimEnd()}\nYuk manfaatkan promo dan diskonnya sekarang!"
+            }
+            finalParts[lastIdx] = cleanPartText(lastPart)
+        }
+
+        finalParts
     }
 
     private fun cleanPartText(rawText: String): String {
