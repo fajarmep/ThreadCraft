@@ -144,9 +144,19 @@ class AppRepository(private val prefs: SecurePrefs, context: Context? = null) {
         description: String,
         affiliateLink: String,
         style: String,
+        tone: String = "Santai & Akrab",
         numParts: Int?
     ): List<String> = withContext(Dispatchers.IO) {
         val hasAffiliate = affiliateLink.isNotBlank()
+
+        val toneInstruction = when (tone) {
+            "Kasual & Hangat" -> "Gunakan bahasa kasual, ramah, hangat, dan bersahabat. Tutur kata santun namun dekat tanpa kaku."
+            "Formal & Edukatif" -> "Gunakan bahasa Indonesia baku yang rapi, objektif, berbobot, dan profesional layaknya artikel literasi atau esai bermutu."
+            "Emosional & Reflektif" -> "Gunakan bahasa yang puitis, penuh penghayatan mendalam, menyentuh hati, dan mengajak pembaca merenung secara personal."
+            "Humoris & Cerdas" -> "Gunakan gaya bahasa santai yang jenaka, menghibur, celetukan cerdas, dan sedikit humor/satir ringan khas percakapan netizen."
+            "Tegas & To The Point" -> "Gunakan kalimat lugas, padat, berani, to-the-point tanpa basa-basi berlebihan, langsung menusuk ke inti persoalan."
+            else -> "Gunakan bahasa santai, akrab, lincah, dan mengalir natural khas obrolan media sosial Threads/Twitter."
+        }
 
         val styleInstruction = if (hasAffiliate) {
             when (style) {
@@ -218,8 +228,11 @@ ATURAN KETAT:
 FORMAT OUTPUT:
 Tulis setiap bagian murni hanya isi postingan tanpa label nomor apapun, dipisahkan dengan tanda ===PART===
 
-GAYA PENULISAN:
+GAYA FORMAT:
 $styleInstruction
+
+GAYA BAHASA & NADA BICARA (TONE):
+$toneInstruction
             """.trimIndent()
         } else {
             """
@@ -241,8 +254,11 @@ ATURAN KETAT:
 FORMAT OUTPUT:
 Tulis setiap bagian murni hanya isi postingan tanpa label nomor apapun, dipisahkan dengan tanda ===PART===
 
-GAYA PENULISAN:
+GAYA FORMAT:
 $styleInstruction
+
+GAYA BAHASA & NADA BICARA (TONE):
+$toneInstruction
             """.trimIndent()
         }
 
@@ -251,12 +267,14 @@ $styleInstruction
 Produk: $productTitle
 Deskripsi: $description
 Link Affiliate: $affiliateLink
+Gaya Bahasa: $tone
 Jumlah bagian: $partCount
             """.trimIndent()
         } else {
             """
 Topik / Judul: $productTitle
 Poin Bahasan / Ringkasan: $description
+Gaya Bahasa: $tone
 Jumlah bagian: $partCount
 Mode: Artikel Murni (Non-komersial / Tanpa Link)
             """.trimIndent()

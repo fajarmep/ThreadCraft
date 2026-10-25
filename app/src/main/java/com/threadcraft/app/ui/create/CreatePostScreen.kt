@@ -240,14 +240,14 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
 
             Spacer(Modifier.height(16.dp))
 
-            // Style dropdown
+            // Style and Tone dropdowns
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(modifier = Modifier.weight(1f)) {
                     DropdownSelector(
-                        label = "Gaya Cerita",
+                        label = "Format Konten",
                         selected = state.storyStyle,
                         expanded = state.showStyleDropdown,
                         onToggle = { viewModel.toggleStyleDropdown() },
@@ -256,17 +256,28 @@ fun CreatePostScreen(viewModel: CreatePostViewModel) {
                     )
                 }
 
-                Box(modifier = Modifier.weight(0.6f)) {
+                Box(modifier = Modifier.weight(1f)) {
                     DropdownSelector(
-                        label = "Jumlah Bagian",
-                        selected = state.numParts,
-                        expanded = state.showPartsDropdown,
-                        onToggle = { viewModel.togglePartsDropdown() },
-                        options = viewModel.partOptions,
-                        onSelect = { viewModel.updateNumParts(it) }
+                        label = "Gaya Bahasa",
+                        selected = state.toneStyle,
+                        expanded = state.showToneDropdown,
+                        onToggle = { viewModel.toggleToneDropdown() },
+                        options = viewModel.toneOptions,
+                        onSelect = { viewModel.updateToneStyle(it) }
                     )
                 }
             }
+
+            Spacer(Modifier.height(12.dp))
+
+            DropdownSelector(
+                label = "Jumlah Bagian",
+                selected = state.numParts,
+                expanded = state.showPartsDropdown,
+                onToggle = { viewModel.togglePartsDropdown() },
+                options = viewModel.partOptions,
+                onSelect = { viewModel.updateNumParts(it) }
+            )
 
             Spacer(Modifier.height(20.dp))
 

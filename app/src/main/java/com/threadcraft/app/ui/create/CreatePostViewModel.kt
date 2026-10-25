@@ -22,6 +22,7 @@ data class CreatePostState(
     val affiliateLink: String = "",
     val mediaUris: List<Uri> = emptyList(),
     val storyStyle: String = "Cerpen Storytelling",
+    val toneStyle: String = "Santai & Akrab",
     val numParts: String = "Auto",
     val generatedParts: List<String> = emptyList(),
     val isGenerating: Boolean = false,
@@ -32,6 +33,7 @@ data class CreatePostState(
     val postSuccess: Boolean = false,
     val scheduleSuccess: Boolean = false,
     val showStyleDropdown: Boolean = false,
+    val showToneDropdown: Boolean = false,
     val showPartsDropdown: Boolean = false
 )
 
@@ -47,15 +49,43 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
         "Thread Tips",
         "Perbandingan Produk"
     )
+    val toneOptions = listOf(
+        "Santai & Akrab",
+        "Kasual & Hangat",
+        "Formal & Edukatif",
+        "Emosional & Reflektif",
+        "Humoris & Cerdas",
+        "Tegas & To The Point"
+    )
     val partOptions = listOf("Auto", "3", "5", "7")
 
     fun updateProductTitle(v: String) { _state.value = _state.value.copy(productTitle = v) }
     fun updateDescription(v: String) { _state.value = _state.value.copy(description = v) }
     fun updateAffiliateLink(v: String) { _state.value = _state.value.copy(affiliateLink = v) }
     fun updateStoryStyle(v: String) { _state.value = _state.value.copy(storyStyle = v, showStyleDropdown = false) }
+    fun updateToneStyle(v: String) { _state.value = _state.value.copy(toneStyle = v, showToneDropdown = false) }
     fun updateNumParts(v: String) { _state.value = _state.value.copy(numParts = v, showPartsDropdown = false) }
-    fun toggleStyleDropdown() { _state.value = _state.value.copy(showStyleDropdown = !_state.value.showStyleDropdown) }
-    fun togglePartsDropdown() { _state.value = _state.value.copy(showPartsDropdown = !_state.value.showPartsDropdown) }
+    fun toggleStyleDropdown() {
+        _state.value = _state.value.copy(
+            showStyleDropdown = !_state.value.showStyleDropdown,
+            showToneDropdown = false,
+            showPartsDropdown = false
+        )
+    }
+    fun toggleToneDropdown() {
+        _state.value = _state.value.copy(
+            showToneDropdown = !_state.value.showToneDropdown,
+            showStyleDropdown = false,
+            showPartsDropdown = false
+        )
+    }
+    fun togglePartsDropdown() {
+        _state.value = _state.value.copy(
+            showPartsDropdown = !_state.value.showPartsDropdown,
+            showStyleDropdown = false,
+            showToneDropdown = false
+        )
+    }
 
     fun addMedia(uris: List<Uri>) {
         _state.value = _state.value.copy(mediaUris = _state.value.mediaUris + uris)
@@ -92,6 +122,7 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     description = s.description,
                     affiliateLink = s.affiliateLink,
                     style = s.storyStyle,
+                    tone = s.toneStyle,
                     numParts = numParts
                 )
                 _state.value = _state.value.copy(isGenerating = false, generatedParts = parts)
@@ -137,7 +168,7 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     PostHistory(
                         productTitle = s.productTitle,
                         affiliateLink = s.affiliateLink,
-                        storyStyle = s.storyStyle,
+                        storyStyle = "${s.storyStyle} • ${s.toneStyle}",
                         parts = s.generatedParts,
                         status = "POSTED",
                         threadIds = threadIds
@@ -169,7 +200,7 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     PostHistory(
                         productTitle = s.productTitle,
                         affiliateLink = s.affiliateLink,
-                        storyStyle = s.storyStyle,
+                        storyStyle = "${s.storyStyle} • ${s.toneStyle}",
                         parts = s.generatedParts,
                         status = "FAILED",
                         errorMessage = t.message
@@ -213,7 +244,7 @@ class CreatePostViewModel(private val prefs: SecurePrefs) : ViewModel() {
                     PostHistory(
                         productTitle = s.productTitle,
                         affiliateLink = s.affiliateLink,
-                        storyStyle = s.storyStyle,
+                        storyStyle = "${s.storyStyle} • ${s.toneStyle}",
                         parts = s.generatedParts,
                         status = "SCHEDULED",
                         scheduledAt = timeMillis,
