@@ -29,7 +29,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug -PversionCode=${{ github.run_number }} -PversionName=1.0.${{ github.run_number }} --stacktrace
+        run: |
+          VERSION_CODE=$(( ${{ github.run_number }} + 100 ))
+          ./gradlew assembleDebug -PversionCode=${VERSION_CODE} -PversionName=1.0.${{ github.run_number }} --stacktrace
 
       - name: Rename APK
         run: |

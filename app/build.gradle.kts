@@ -8,8 +8,8 @@ android {
     namespace = "com.threadcraft.app"
     compileSdk = 34
 
-    val vCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 36
-    val vName = (project.findProperty("versionName") as? String) ?: "1.0.36"
+    val vCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 137
+    val vName = (project.findProperty("versionName") as? String) ?: "1.0.37"
 
     defaultConfig {
         applicationId = "com.threadcraft.app"
