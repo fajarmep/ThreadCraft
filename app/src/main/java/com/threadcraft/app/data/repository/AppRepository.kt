@@ -693,7 +693,7 @@ Mode: Artikel Murni (Non-komersial / Tanpa Link)
             clientId = prefs.threadsAppId.trim(),
             clientSecret = prefs.threadsAppSecret.trim(),
             redirectUri = redirectUri,
-            code = code.trim()
+            code = code.trim().removeSuffix("#_")
         )
         var finalToken = response.access_token
         try {

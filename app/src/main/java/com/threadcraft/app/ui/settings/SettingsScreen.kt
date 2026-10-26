@@ -4,12 +4,16 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,6 +39,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
@@ -73,6 +78,7 @@ import com.threadcraft.app.ui.theme.Accent
 import com.threadcraft.app.ui.theme.OnAccent
 import com.threadcraft.app.ui.theme.Outline
 import com.threadcraft.app.ui.theme.SuccessGreen
+import com.threadcraft.app.ui.theme.SurfaceContainer
 import com.threadcraft.app.ui.theme.SurfaceVariant
 import kotlinx.coroutines.delay
 
@@ -423,6 +429,93 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         Spacer(Modifier.width(8.dp))
                         Text("Login ke Threads", color = Accent)
                     }
+
+                    Spacer(Modifier.height(8.dp))
+                    var showManualAuth by remember { mutableStateOf(false) }
+                    var manualCodeInput by remember { mutableStateOf("") }
+
+                    OutlinedButton(
+                        onClick = { showManualAuth = !showManualAuth },
+                        modifier = Modifier.fillMaxWidth().height(38.dp),
+                        shape = RectangleShape,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Outline)
+                    ) {
+                        Text(
+                            if (showManualAuth) "Tutup Login Browser" else "Login via Browser Luar (Alternatif 2FA)",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+
+                    if (showManualAuth) {
+                        Spacer(Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(SurfaceContainer, RectangleShape)
+                                .border(1.dp, Outline, RectangleShape)
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    "Jika 2FA di in-app browser macet:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "1. Klik tombol di bawah untuk buka otorisasi di Chrome/browser.\n2. Login & masukkan 2FA di browser hingga dialihkan ke callback.\n3. Salin URL callback atau kodenya lalu tempel di sini.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        val s = state
+                                        val targetRedirect = s.redirectUri.trim().ifBlank { "https://threadcraft.app/callback" }
+                                        val u = Uri.parse("https://threads.net/oauth/authorize").buildUpon()
+                                            .appendQueryParameter("client_id", s.threadsAppId.trim())
+                                            .appendQueryParameter("redirect_uri", targetRedirect)
+                                            .appendQueryParameter("scope", "threads_basic,threads_content_publish,threads_manage_replies")
+                                            .appendQueryParameter("response_type", "code")
+                                            .build()
+                                        try {
+                                            context.startActivity(Intent(Intent.ACTION_VIEW, u))
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Gagal buka browser: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(36.dp),
+                                    shape = RectangleShape,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Accent)
+                                ) {
+                                    Icon(Icons.Default.OpenInNew, contentDescription = null, tint = Accent, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Buka Otorisasi di Browser", color = Accent, style = MaterialTheme.typography.labelSmall)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                FlatTextField(
+                                    value = manualCodeInput,
+                                    onValueChange = { manualCodeInput = it },
+                                    label = "Tempel URL Callback / Auth Code",
+                                    placeholder = "https://threadcraft.app/callback?code=..."
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        if (manualCodeInput.isNotBlank()) {
+                                            viewModel.handleOAuthCallback(manualCodeInput.trim())
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                                    shape = RectangleShape,
+                                    colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = OnAccent)
+                                ) {
+                                    Text("Hubungkan Akun", style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -490,6 +583,10 @@ private fun OAuthDialog(
     onCodeReceived: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    var manualInput by remember { mutableStateOf("") }
+    var showManualInput by remember { mutableStateOf(false) }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -518,14 +615,103 @@ private fun OAuthDialog(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f).padding(start = 8.dp)
                 )
+                IconButton(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Gagal buka browser: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.OpenInNew,
+                        contentDescription = "Buka di Browser",
+                        tint = Accent
+                    )
+                }
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, "Close", tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
 
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(SurfaceVariant)
+                    .border(1.dp, Outline, RectangleShape)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (showManualInput) "Tempel URL callback atau kode auth:" else "2FA macet? Buka di browser luar & tempel hasil di sini",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f).padding(end = 6.dp)
+                    )
+                    OutlinedButton(
+                        onClick = { showManualInput = !showManualInput },
+                        shape = RectangleShape,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Accent),
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Text(
+                            text = if (showManualInput) "Tutup" else "Tempel Kode",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Accent
+                        )
+                    }
+                }
+            }
+
+            if (showManualInput) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceContainer)
+                        .padding(8.dp)
+                ) {
+                    FlatTextField(
+                        value = manualInput,
+                        onValueChange = { manualInput = it },
+                        label = "Kode atau URL Callback",
+                        placeholder = "https://threadcraft.app/callback?code=..."
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Button(
+                        onClick = {
+                            if (manualInput.isNotBlank()) {
+                                onCodeReceived(manualInput.trim())
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                        shape = RectangleShape,
+                        colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = OnAccent)
+                    ) {
+                        Text("Hubungkan Akun", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+
             AndroidView(
-                factory = { context ->
-                    WebView(context).apply {
+                factory = { ctx ->
+                    val frameLayout = FrameLayout(ctx).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    }
+
+                    val mainWebView = WebView(ctx).apply {
+                        layoutParams = FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                        )
                         isFocusable = true
                         isFocusableInTouchMode = true
 
@@ -546,7 +732,7 @@ private fun OAuthDialog(
                             setSupportMultipleWindows(true)
                             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
-                            // Strip '; wv' and 'Version/X.X' so Meta serves standard mobile Chrome 2FA UI instead of restricted in-app browser view
+                            // Clean user agent to standard mobile Chrome
                             userAgentString = userAgentString
                                 .replace("; wv", "")
                                 .replace(Regex("Version/[0-9.]+\\s*"), "")
@@ -559,11 +745,28 @@ private fun OAuthDialog(
                                 isUserGesture: Boolean,
                                 resultMsg: android.os.Message?
                             ): Boolean {
-                                val newWebView = WebView(context).apply {
+                                val popupWebView = WebView(ctx).apply {
+                                    layoutParams = FrameLayout.LayoutParams(
+                                        FrameLayout.LayoutParams.MATCH_PARENT,
+                                        FrameLayout.LayoutParams.MATCH_PARENT
+                                    )
+                                    isFocusable = true
+                                    isFocusableInTouchMode = true
                                     settings.javaScriptEnabled = true
                                     settings.domStorageEnabled = true
+                                    settings.databaseEnabled = true
                                     settings.userAgentString = view?.settings?.userAgentString
-                                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                                    val cm = CookieManager.getInstance()
+                                    cm.setAcceptCookie(true)
+                                    cm.setAcceptThirdPartyCookies(this, true)
+
+                                    webChromeClient = object : WebChromeClient() {
+                                        override fun onCloseWindow(window: WebView?) {
+                                            frameLayout.removeView(window)
+                                            window?.destroy()
+                                        }
+                                    }
+
                                     webViewClient = object : WebViewClient() {
                                         override fun shouldOverrideUrlLoading(
                                             v: WebView?,
@@ -578,8 +781,9 @@ private fun OAuthDialog(
                                         }
                                     }
                                 }
+                                frameLayout.addView(popupWebView)
                                 val transport = resultMsg?.obj as? WebView.WebViewTransport
-                                transport?.webView = newWebView
+                                transport?.webView = popupWebView
                                 resultMsg?.sendToTarget()
                                 return true
                             }
@@ -601,6 +805,9 @@ private fun OAuthDialog(
                         loadUrl(url)
                         requestFocus()
                     }
+
+                    frameLayout.addView(mainWebView)
+                    frameLayout
                 },
                 modifier = Modifier
                     .weight(1f)

@@ -138,9 +138,15 @@ class SettingsViewModel(private val prefs: SecurePrefs) : ViewModel() {
         _state.value = _state.value.copy(showOAuthWebView = false)
     }
 
-    fun handleOAuthCallback(url: String) {
-        val uri = Uri.parse(url)
-        val code = uri.getQueryParameter("code") ?: return
+    fun handleOAuthCallback(urlOrCode: String) {
+        val trimmed = urlOrCode.trim()
+        val code = if (trimmed.contains("code=")) {
+            val uri = Uri.parse(trimmed)
+            uri.getQueryParameter("code") ?: trimmed.substringAfter("code=").substringBefore("&").substringBefore("#")
+        } else {
+            trimmed.substringBefore("#")
+        }
+        if (code.isBlank()) return
         _state.value = _state.value.copy(showOAuthWebView = false, isExchangingToken = true)
 
         viewModelScope.launch {
