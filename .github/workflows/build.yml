@@ -36,13 +36,13 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p build-output
-          cp app/build/outputs/apk/debug/app-debug.apk "build-output/ThreadCraft-v1.0.${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "build-output/ThreadsCraft-v1.0.${{ github.run_number }}.apk"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ThreadCraft-v1.0.${{ github.run_number }}
-          path: build-output/ThreadCraft-*.apk
+          name: ThreadsCraft-v1.0.${{ github.run_number }}
+          path: build-output/ThreadsCraft-*.apk
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -50,9 +50,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: ThreadCraft v1.0.${{ github.run_number }}
+          name: ThreadsCraft v1.0.${{ github.run_number }}
           draft: false
           prerelease: false
-          files: build-output/ThreadCraft-*.apk
+          files: build-output/ThreadsCraft-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

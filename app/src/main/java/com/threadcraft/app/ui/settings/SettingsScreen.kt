@@ -551,7 +551,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "ThreadCraft $appVersion",
+                    text = "ThreadsCraft $appVersion",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
