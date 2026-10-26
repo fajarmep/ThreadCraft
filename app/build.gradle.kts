@@ -8,12 +8,15 @@ android {
     namespace = "com.threadcraft.app"
     compileSdk = 34
 
+    val vCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 36
+    val vName = (project.findProperty("versionName") as? String) ?: "1.0.36"
+
     defaultConfig {
         applicationId = "com.threadcraft.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 37
-        versionName = "1.0.31"
+        versionCode = vCode
+        versionName = vName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -52,6 +55,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"

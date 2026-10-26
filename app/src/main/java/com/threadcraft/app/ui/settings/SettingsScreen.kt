@@ -533,7 +533,31 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 Text("Simpan Pengaturan", style = MaterialTheme.typography.labelLarge)
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
+
+            val appVersion = remember {
+                try {
+                    val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                    "v${pInfo.versionName} (${pInfo.versionCode})"
+                } catch (e: Exception) {
+                    "v1.0"
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "ThreadCraft $appVersion",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
