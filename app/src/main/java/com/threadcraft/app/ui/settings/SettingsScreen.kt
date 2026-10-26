@@ -529,10 +529,9 @@ private fun OAuthDialog(
                         isFocusable = true
                         isFocusableInTouchMode = true
 
-                        CookieManager.getInstance().apply {
-                            setAcceptCookie(true)
-                            setAcceptThirdPartyCookies(this@apply, true)
-                        }
+                        val cookieManager = CookieManager.getInstance()
+                        cookieManager.setAcceptCookie(true)
+                        cookieManager.setAcceptThirdPartyCookies(this, true)
 
                         settings.apply {
                             javaScriptEnabled = true
